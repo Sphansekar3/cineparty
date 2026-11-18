@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { Film, Users, PlusCircle, ArrowRight, ShieldCheck, Smartphone, Zap, Sparkles } from 'lucide-react';
+import { Film, Users, PlusCircle, ArrowRight, ShieldCheck, Smartphone, Zap, Sparkles, User } from 'lucide-react';
 
 interface LobbyProps {
+  userName: string;
+  onUpdateUserName: (name: string) => void;
   onStartCreate: () => void;
   onJoinRoom: (roomId: string) => void;
 }
 
-export const Lobby: React.FC<LobbyProps> = ({ onStartCreate, onJoinRoom }) => {
+export const Lobby: React.FC<LobbyProps> = ({ userName, onUpdateUserName, onStartCreate, onJoinRoom }) => {
   const [joinInput, setJoinInput] = useState('');
   const [joinError, setJoinError] = useState('');
 
@@ -83,9 +85,28 @@ export const Lobby: React.FC<LobbyProps> = ({ onStartCreate, onJoinRoom }) => {
         <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight leading-tight max-w-2xl mx-auto mb-4">
           Watch Movies Together, <span className="text-cinema-accent">In Perfect Sync.</span>
         </h1>
-        <p className="text-sm sm:text-base text-gray-400 max-w-xl mx-auto mb-10 leading-relaxed">
+        <p className="text-sm sm:text-base text-gray-400 max-w-xl mx-auto mb-6 leading-relaxed">
           Stream movies from YouTube, Google Drive, Dropbox, or free catalogs with your friend in real-time. Zero downloads, zero screen sharing.
         </p>
+
+        {/* User Display Name Input */}
+        <div className="max-w-xs sm:max-w-sm mx-auto mb-8 p-2 bg-cinema-800/90 border border-cinema-700/80 rounded-xl flex items-center justify-between gap-3 shadow-md">
+          <div className="flex items-center gap-2 pl-2">
+            <User className="w-4 h-4 text-cinema-accent" />
+            <span className="text-xs text-gray-300 font-semibold">Your Name:</span>
+          </div>
+          <input
+            type="text"
+            value={userName}
+            onChange={(e) => {
+              const val = e.target.value.substring(0, 24);
+              onUpdateUserName(val);
+            }}
+            placeholder="Enter your name..."
+            maxLength={24}
+            className="flex-1 max-w-[180px] px-2.5 py-1 bg-cinema-900 border border-cinema-700 rounded-lg text-xs font-bold text-white focus:outline-none focus:ring-1 focus:ring-cinema-accent"
+          />
+        </div>
 
         {/* Action Cards: Create Room vs Join Room */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-2xl mx-auto text-left">

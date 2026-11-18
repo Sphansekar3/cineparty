@@ -24,7 +24,7 @@ export const App: React.FC = () => {
   const [roomId, setRoomId] = useState<string>(initialRoomParam || '');
   const [isHost, setIsHost] = useState<boolean>(!initialRoomParam);
 
-  const [userName] = useState<string>(() => {
+  const [userName, setUserName] = useState<string>(() => {
     const saved = localStorage.getItem('cineparty_username');
     if (saved) return saved;
     const names = ['Alex', 'Sam', 'Jordan', 'Taylor', 'Casey', 'Riley'];
@@ -32,6 +32,17 @@ export const App: React.FC = () => {
     localStorage.setItem('cineparty_username', assigned);
     return assigned;
   });
+
+  const handleUpdateUserName = (newName: string) => {
+    const trimmed = newName.trim();
+    if (!trimmed) return;
+    const clean = trimmed.substring(0, 24);
+    const oldName = userName;
+    setUserName(clean);
+    localStorage.setItem('cineparty_username', clean);
+    addSystemNotice(`You changed your display name to "${clean}"`);
+    broadcastSync('USER_NAME_CHANGE', { oldName, newName: clean });
+  };
 
   // Modals for creation and invite
   const [isContentSelectorOpen, setIsContentSelectorOpen] = useState<boolean>(false);
@@ -326,6 +337,10 @@ export const App: React.FC = () => {
         addSystemNotice(`${msg.senderName} closed their tab.`);
         break;
 
+      case 'USER_NAME_CHANGE':
+        addSystemNotice(`${msg.payload.oldName} changed their name to "${msg.payload.newName}"`);
+        break;
+
       default:
         break;
     }
@@ -506,6 +521,8 @@ export const App: React.FC = () => {
     return (
       <>
         <Lobby
+          userName={userName}
+          onUpdateUserName={handleUpdateUserName}
           onStartCreate={handleStartCreateFlow}
           onJoinRoom={handleJoinFromLobby}
         />
@@ -524,6 +541,8 @@ export const App: React.FC = () => {
       {/* Top Navigation */}
       <Navbar
         roomId={roomId}
+        userName={userName}
+        onUpdateUserName={handleUpdateUserName}
         connectionState={connectionState}
         peerCount={peerCount}
         activeServerId={activeServerId}
@@ -670,7 +689,9 @@ export const App: React.FC = () => {
             <Chat
               messages={messages}
               currentUserId={peerService.getPeerId() || userName}
+              currentUserName={userName}
               onSendMessage={handleSendMessage}
+              onUpdateUserName={handleUpdateUserName}
             />
           </div>
         </div>
@@ -685,7 +706,9 @@ export const App: React.FC = () => {
             <Chat
               messages={messages}
               currentUserId={peerService.getPeerId() || userName}
+              currentUserName={userName}
               onSendMessage={handleSendMessage}
+              onUpdateUserName={handleUpdateUserName}
             />
           </div>
         </div>

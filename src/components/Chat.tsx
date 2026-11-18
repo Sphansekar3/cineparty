@@ -1,19 +1,25 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, MessageSquare } from 'lucide-react';
+import { Send, MessageSquare, User, Edit2, Check, X } from 'lucide-react';
 import type { ChatMessage } from '../types';
 
 interface ChatProps {
   messages: ChatMessage[];
   currentUserId: string;
+  currentUserName: string;
   onSendMessage: (text: string) => void;
+  onUpdateUserName?: (name: string) => void;
 }
 
 export const Chat: React.FC<ChatProps> = ({
   messages,
   currentUserId,
+  currentUserName,
   onSendMessage,
+  onUpdateUserName,
 }) => {
   const [inputText, setInputText] = useState('');
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState(currentUserName);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   // Scroll ONLY the inner chat container, without scrolling the main browser window!
@@ -34,6 +40,15 @@ export const Chat: React.FC<ChatProps> = ({
     setInputText('');
   };
 
+  const handleSaveName = (e: React.FormEvent) => {
+    e.preventDefault();
+    const clean = nameInput.trim();
+    if (clean && onUpdateUserName) {
+      onUpdateUserName(clean);
+    }
+    setIsEditingName(false);
+  };
+
   return (
     <div className="flex flex-col h-full bg-cinema-800 border border-cinema-700/80 rounded-xl overflow-hidden shadow-lg">
       {/* Chat Header */}
@@ -45,6 +60,53 @@ export const Chat: React.FC<ChatProps> = ({
         <span className="text-[10px] text-gray-400 font-mono">
           {messages.length} messages
         </span>
+      </div>
+
+      {/* User Display Name Banner with 1-Click Edit */}
+      <div className="px-3 py-1.5 bg-cinema-900/90 border-b border-cinema-700/60 flex items-center justify-between text-xs">
+        <span className="text-[11px] text-gray-400 flex items-center gap-1.5">
+          <User className="w-3.5 h-3.5 text-cinema-accent" />
+          <span>Chatting as:</span>
+        </span>
+        {isEditingName ? (
+          <form onSubmit={handleSaveName} className="flex items-center gap-1">
+            <input
+              type="text"
+              value={nameInput}
+              onChange={(e) => setNameInput(e.target.value)}
+              maxLength={20}
+              autoFocus
+              className="px-2 py-0.5 bg-cinema-800 border border-cinema-accent rounded text-xs text-white focus:outline-none w-28"
+            />
+            <button
+              type="submit"
+              className="p-1 text-emerald-400 hover:bg-cinema-700 rounded transition"
+              title="Save Name"
+            >
+              <Check className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsEditingName(false)}
+              className="p-1 text-gray-400 hover:bg-cinema-700 rounded transition"
+              title="Cancel"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </form>
+        ) : (
+          <button
+            onClick={() => {
+              setNameInput(currentUserName);
+              setIsEditingName(true);
+            }}
+            className="flex items-center gap-1 font-bold text-gray-200 hover:text-white bg-cinema-800/80 hover:bg-cinema-700 px-2 py-0.5 rounded border border-cinema-700 transition group"
+            title="Click to change your username"
+          >
+            <span className="text-xs text-cinema-accent">{currentUserName}</span>
+            <Edit2 className="w-2.5 h-2.5 text-gray-400 group-hover:text-white" />
+          </button>
+        )}
       </div>
 
       {/* Message List */}

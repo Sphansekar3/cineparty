@@ -28,7 +28,8 @@ export type SyncActionType =
   | 'SYNC_PULSE'
   | 'BUFFERING_START'
   | 'BUFFERING_END'
-  | 'USER_LEFT';
+  | 'USER_LEFT'
+  | 'USER_NAME_CHANGE';
 
 export interface SyncMessage {
   type: SyncActionType;
