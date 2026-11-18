@@ -1,12 +1,10 @@
 import React from 'react';
-import { Film, Users, Share2, Shield, ShieldAlert, Server, User } from 'lucide-react';
+import { Film, Users, Share2, Shield, ShieldAlert, Server } from 'lucide-react';
 import type { ConnectionState } from '../services/peerService';
 import { EMBED_SERVERS } from '../services/embedService';
 
 interface NavbarProps {
   roomId: string;
-  userName: string;
-  onUpdateUserName: (name: string) => void;
   connectionState: ConnectionState;
   peerCount: number;
   activeServerId: string;
@@ -19,8 +17,6 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({
   roomId,
-  userName,
-  onUpdateUserName,
   connectionState,
   peerCount,
   activeServerId,
@@ -52,21 +48,6 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Room and Status info */}
       <div className="flex items-center gap-1.5 sm:gap-3">
-        {/* User profile / Name change button */}
-        <button
-          onClick={() => {
-            const next = window.prompt('Enter your display name:', userName);
-            if (next && next.trim()) {
-              onUpdateUserName(next.trim().substring(0, 24));
-            }
-          }}
-          title="Click to edit your display name"
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cinema-900 hover:bg-cinema-700/80 border border-cinema-700 text-xs text-gray-200 transition group"
-        >
-          <User className="w-3 h-3 text-cinema-accent" />
-          <span className="max-w-[75px] sm:max-w-[120px] truncate font-medium">{userName}</span>
-        </button>
-
         {/* Connection status indicator */}
         <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-cinema-900 border border-cinema-700 text-xs">
           <span

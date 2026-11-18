@@ -37,11 +37,8 @@ export const App: React.FC = () => {
     const trimmed = newName.trim();
     if (!trimmed) return;
     const clean = trimmed.substring(0, 24);
-    const oldName = userName;
     setUserName(clean);
     localStorage.setItem('cineparty_username', clean);
-    addSystemNotice(`You changed your display name to "${clean}"`);
-    broadcastSync('USER_NAME_CHANGE', { oldName, newName: clean });
   };
 
   // Modals for creation and invite
@@ -337,10 +334,6 @@ export const App: React.FC = () => {
         addSystemNotice(`${msg.senderName} closed their tab.`);
         break;
 
-      case 'USER_NAME_CHANGE':
-        addSystemNotice(`${msg.payload.oldName} changed their name to "${msg.payload.newName}"`);
-        break;
-
       default:
         break;
     }
@@ -525,6 +518,7 @@ export const App: React.FC = () => {
           onUpdateUserName={handleUpdateUserName}
           onStartCreate={handleStartCreateFlow}
           onJoinRoom={handleJoinFromLobby}
+          invitedRoomId={initialRoomParam || undefined}
         />
         <ContentSelectorModal
           isOpen={isContentSelectorOpen}
@@ -541,8 +535,6 @@ export const App: React.FC = () => {
       {/* Top Navigation */}
       <Navbar
         roomId={roomId}
-        userName={userName}
-        onUpdateUserName={handleUpdateUserName}
         connectionState={connectionState}
         peerCount={peerCount}
         activeServerId={activeServerId}
@@ -689,9 +681,7 @@ export const App: React.FC = () => {
             <Chat
               messages={messages}
               currentUserId={peerService.getPeerId() || userName}
-              currentUserName={userName}
               onSendMessage={handleSendMessage}
-              onUpdateUserName={handleUpdateUserName}
             />
           </div>
         </div>
@@ -706,9 +696,7 @@ export const App: React.FC = () => {
             <Chat
               messages={messages}
               currentUserId={peerService.getPeerId() || userName}
-              currentUserName={userName}
               onSendMessage={handleSendMessage}
-              onUpdateUserName={handleUpdateUserName}
             />
           </div>
         </div>

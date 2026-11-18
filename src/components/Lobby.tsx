@@ -6,10 +6,17 @@ interface LobbyProps {
   onUpdateUserName: (name: string) => void;
   onStartCreate: () => void;
   onJoinRoom: (roomId: string) => void;
+  invitedRoomId?: string;
 }
 
-export const Lobby: React.FC<LobbyProps> = ({ userName, onUpdateUserName, onStartCreate, onJoinRoom }) => {
-  const [joinInput, setJoinInput] = useState('');
+export const Lobby: React.FC<LobbyProps> = ({
+  userName,
+  onUpdateUserName,
+  onStartCreate,
+  onJoinRoom,
+  invitedRoomId,
+}) => {
+  const [joinInput, setJoinInput] = useState(invitedRoomId || '');
   const [joinError, setJoinError] = useState('');
 
   const handleJoinSubmit = (e: React.FormEvent) => {
@@ -89,23 +96,31 @@ export const Lobby: React.FC<LobbyProps> = ({ userName, onUpdateUserName, onStar
           Stream movies from YouTube, Google Drive, Dropbox, or free catalogs with your friend in real-time. Zero downloads, zero screen sharing.
         </p>
 
-        {/* User Display Name Input */}
-        <div className="max-w-xs sm:max-w-sm mx-auto mb-8 p-2 bg-cinema-800/90 border border-cinema-700/80 rounded-xl flex items-center justify-between gap-3 shadow-md">
-          <div className="flex items-center gap-2 pl-2">
-            <User className="w-4 h-4 text-cinema-accent" />
-            <span className="text-xs text-gray-300 font-semibold">Your Name:</span>
+        {/* Prominent Onboarding: Display Name Input */}
+        <div className="max-w-xl mx-auto mb-10">
+          <div className="bg-cinema-800/95 border-2 border-cinema-700/80 hover:border-cinema-accent/60 focus-within:border-cinema-accent rounded-2xl p-4 sm:p-5 shadow-2xl backdrop-blur-md transition-all text-left">
+            <div className="flex items-center justify-between mb-2">
+              <label htmlFor="user-display-name" className="text-xs uppercase tracking-wider text-gray-300 font-bold flex items-center gap-2">
+                <User className="w-4 h-4 text-cinema-accent" />
+                <span>Your Name in Watch Party</span>
+              </label>
+              <span className="text-[11px] text-gray-400">Visible to friends</span>
+            </div>
+            <div className="relative">
+              <input
+                id="user-display-name"
+                type="text"
+                value={userName}
+                onChange={(e) => {
+                  const val = e.target.value.substring(0, 24);
+                  onUpdateUserName(val);
+                }}
+                placeholder="Enter your name (e.g. Shreyas)..."
+                maxLength={24}
+                className="w-full px-4 py-3 bg-cinema-900 border border-cinema-700/80 rounded-xl text-base sm:text-lg font-bold text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cinema-accent/50 transition shadow-inner"
+              />
+            </div>
           </div>
-          <input
-            type="text"
-            value={userName}
-            onChange={(e) => {
-              const val = e.target.value.substring(0, 24);
-              onUpdateUserName(val);
-            }}
-            placeholder="Enter your name..."
-            maxLength={24}
-            className="flex-1 max-w-[180px] px-2.5 py-1 bg-cinema-900 border border-cinema-700 rounded-lg text-xs font-bold text-white focus:outline-none focus:ring-1 focus:ring-cinema-accent"
-          />
         </div>
 
         {/* Action Cards: Create Room vs Join Room */}
