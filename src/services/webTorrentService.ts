@@ -33,7 +33,7 @@ class WebTorrentService {
 
     this.scriptLoadingPromise = new Promise((resolve, reject) => {
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js';
+      script.src = 'https://cdn.jsdelivr.net/npm/webtorrent@1.9.7/webtorrent.min.js';
       script.async = true;
       script.onload = () => {
         resolve();
@@ -124,12 +124,23 @@ class WebTorrentService {
               return;
             }
 
+            // Clear any prior source on video element to prevent stream piping conflicts
+            try {
+              videoElement.pause();
+              videoElement.removeAttribute('src');
+              videoElement.load();
+            } catch (e) {}
+
             // Render stream directly into CineParty's native <video> element
-            file.renderTo(videoElement, { autoplay: false }, (err: any) => {
-              if (err) {
-                console.warn('[WebTorrent] renderTo notice:', err);
-              }
-            });
+            if (typeof file.renderTo === 'function') {
+              file.renderTo(videoElement, { autoplay: false }, (err: any) => {
+                if (err) {
+                  console.warn('[WebTorrent] renderTo notice:', err);
+                }
+              });
+            } else if (typeof file.streamTo === 'function') {
+              file.streamTo(videoElement);
+            }
 
             // Send ready status
             onStatusUpdate?.({
