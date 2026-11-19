@@ -33,7 +33,7 @@ class WebTorrentService {
 
     this.scriptLoadingPromise = new Promise((resolve, reject) => {
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/webtorrent@1.9.7/webtorrent.min.js';
+      script.src = 'https://cdn.jsdelivr.net/npm/webtorrent@1.8.0/webtorrent.min.js';
       script.async = true;
       script.onload = () => {
         resolve();
@@ -141,6 +141,21 @@ class WebTorrentService {
             } else if (typeof file.streamTo === 'function') {
               file.streamTo(videoElement);
             }
+
+            // Once torrent download reaches 100%, guarantee seamless playback via blob URL
+            torrent.once('done', () => {
+              if (file && typeof file.getBlobURL === 'function') {
+                file.getBlobURL((err: any, url: string) => {
+                  if (!err && url && videoElement) {
+                    const currentTime = videoElement.currentTime;
+                    const isPaused = videoElement.paused;
+                    videoElement.src = url;
+                    videoElement.currentTime = currentTime;
+                    if (!isPaused) videoElement.play().catch(() => {});
+                  }
+                });
+              }
+            });
 
             // Send ready status
             onStatusUpdate?.({
