@@ -159,6 +159,34 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     video.playbackRate = playbackRate;
   }, [playbackRate, directStreamUrl]);
 
+  // Listen to postMessage events from modern embed providers (e.g. vidlink.pro)
+  useEffect(() => {
+    const handleEmbedMessage = (event: MessageEvent) => {
+      if (!event.origin.includes('vidlink.pro')) return;
+      const data = event.data;
+      if (!data) return;
+
+      if (data.type === 'MEDIA_DATA' && data.data?.currentTime !== undefined) {
+        const t = Math.floor(data.data.currentTime);
+        if (Math.abs(t - currentTime) > 2) {
+          onNativeSeek?.(t);
+        }
+      } else if (data.event === 'play' || data.event === 'playTriggered') {
+        if (!isPlaying) onNativePlay?.();
+      } else if (data.event === 'pause' || data.event === 'pauseTriggered') {
+        if (isPlaying) onNativePause?.();
+      } else if (data.event === 'timeupdate' && data.currentTime !== undefined) {
+        const t = Math.floor(data.currentTime);
+        if (Math.abs(t - currentTime) > 2) {
+          onNativeSeek?.(t);
+        }
+      }
+    };
+
+    window.addEventListener('message', handleEmbedMessage);
+    return () => window.removeEventListener('message', handleEmbedMessage);
+  }, [isPlaying, currentTime, onNativePlay, onNativePause, onNativeSeek]);
+
   if (!movie) {
     return (
       <div className="video-responsive-wrapper rounded-xl border border-cinema-700/80 bg-cinema-800 flex items-center justify-center p-6 text-center">
@@ -229,7 +257,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             referrerPolicy="no-referrer"
             sandbox={
               adShieldEnabled
-                ? 'allow-scripts allow-same-origin allow-forms allow-presentation'
+                ? 'allow-scripts allow-same-origin allow-forms allow-presentation allow-top-navigation-by-user-activation'
                 : undefined
             }
           />

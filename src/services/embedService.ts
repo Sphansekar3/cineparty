@@ -2,29 +2,24 @@ import type { EmbedServer } from '../types';
 
 export const EMBED_SERVERS: EmbedServer[] = [
   {
-    id: 'vidsrc-cc',
-    name: 'Server 1 (VidSrc CC)',
-    buildMovieUrl: (tmdbId) => `https://vidsrc.cc/v2/embed/movie/${tmdbId}?autoPlay=false`,
+    id: 'vidlink',
+    name: 'Server 1 (VidLink - Fast & Clean)',
+    buildMovieUrl: (tmdbId) => `https://vidlink.pro/movie/${tmdbId}?primaryColor=e50914`,
   },
   {
-    id: 'vidsrc-xyz',
-    name: 'Server 2 (VidSrc XYZ)',
-    buildMovieUrl: (tmdbId) => `https://vidsrc.xyz/embed/movie/${tmdbId}`,
+    id: 'autoembed',
+    name: 'Server 2 (AutoEmbed)',
+    buildMovieUrl: (tmdbId) => `https://autoembed.me/movie/tmdb/${tmdbId}`,
   },
   {
-    id: 'multiembed',
-    name: 'Server 3 (SuperEmbed)',
-    buildMovieUrl: (tmdbId) => `https://multiembed.mov/?video_id=${tmdbId}&tmdb=1`,
+    id: 'vidsrc-to',
+    name: 'Server 3 (VidSrc To)',
+    buildMovieUrl: (tmdbId) => `https://vidsrc.to/embed/movie/${tmdbId}`,
   },
   {
     id: '2embed',
     name: 'Server 4 (2Embed)',
     buildMovieUrl: (tmdbId) => `https://www.2embed.cc/embed/${tmdbId}`,
-  },
-  {
-    id: 'smashystream',
-    name: 'Server 5 (Smashy)',
-    buildMovieUrl: (tmdbId) => `https://player.smashystream.com/movie/${tmdbId}`,
   },
 ];
 

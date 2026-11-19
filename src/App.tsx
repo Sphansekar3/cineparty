@@ -50,7 +50,7 @@ export const App: React.FC = () => {
   const [connectionState, setConnectionState] = useState<ConnectionState>('connecting');
   const [peerCount, setPeerCount] = useState<number>(0);
   const [isHostLocked, setIsHostLocked] = useState<boolean>(false);
-  const [activeServerId, setActiveServerId] = useState<string>('vidsrc-cc');
+  const [activeServerId, setActiveServerId] = useState<string>('vidlink');
 
   // Media & Sync state
   const [currentMovie, setCurrentMovie] = useState<Movie | null>(CURATED_MOVIES[0]);
