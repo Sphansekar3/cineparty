@@ -84,98 +84,171 @@ export const Lobby: React.FC<LobbyProps> = ({
 
       {/* Hero Content */}
       <main className="max-w-4xl w-full mx-auto my-auto py-10 z-10 text-center">
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-cinema-800 border border-cinema-700 text-xs text-gray-300 mb-6 shadow-sm">
-          <Sparkles className="w-3.5 h-3.5 text-cinema-accent" />
-          <span>Peer-to-Peer Real-Time Video Sync</span>
-        </div>
-
-        <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight leading-tight max-w-2xl mx-auto mb-4">
-          Watch Movies Together, <span className="text-cinema-accent">In Perfect Sync.</span>
-        </h1>
-        <p className="text-sm sm:text-base text-gray-400 max-w-xl mx-auto mb-6 leading-relaxed">
-          Stream movies from YouTube, Google Drive, Dropbox, or free catalogs with your friend in real-time. Zero downloads, zero screen sharing.
-        </p>
-
-        {/* Prominent Onboarding: Display Name Input */}
-        <div className="max-w-xl mx-auto mb-10">
-          <div className="bg-cinema-800/95 border-2 border-cinema-700/80 hover:border-cinema-accent/60 focus-within:border-cinema-accent rounded-2xl p-4 sm:p-5 shadow-2xl backdrop-blur-md transition-all text-left">
-            <div className="flex items-center justify-between mb-2">
-              <label htmlFor="user-display-name" className="text-xs uppercase tracking-wider text-gray-300 font-bold flex items-center gap-2">
-                <User className="w-4 h-4 text-cinema-accent" />
-                <span>Your Name in Watch Party</span>
-              </label>
-              <span className="text-[11px] text-gray-400">Visible to friends</span>
+        {invitedRoomId ? (
+          /* Invited Guest Dedicated Flow */
+          <div className="max-w-md mx-auto space-y-6">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cinema-accent/20 border border-cinema-accent/40 text-xs text-red-300 font-bold mb-1 shadow-sm animate-pulse">
+              <Sparkles className="w-3.5 h-3.5 text-cinema-accent" />
+              <span>You've Been Invited to Watch!</span>
             </div>
-            <div className="relative">
-              <input
-                id="user-display-name"
-                type="text"
-                value={userName}
-                onChange={(e) => {
-                  const val = e.target.value.substring(0, 24);
-                  onUpdateUserName(val);
-                }}
-                placeholder="Enter your name (e.g. Shreyas)..."
-                maxLength={24}
-                className="w-full px-4 py-3 bg-cinema-900 border border-cinema-700/80 rounded-xl text-base sm:text-lg font-bold text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cinema-accent/50 transition shadow-inner"
-              />
-            </div>
-          </div>
-        </div>
 
-        {/* Action Cards: Create Room vs Join Room */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-2xl mx-auto text-left">
-          {/* Card 1: Create a Room */}
-          <div className="bg-cinema-800/90 border border-cinema-700 hover:border-cinema-accent/80 rounded-2xl p-6 flex flex-col justify-between shadow-xl transition hover:-translate-y-1">
             <div>
-              <div className="w-12 h-12 rounded-xl bg-cinema-accent/20 border border-cinema-accent/40 flex items-center justify-center text-cinema-accent mb-4">
-                <PlusCircle className="w-6 h-6" />
-              </div>
-              <h2 className="text-lg font-bold text-white mb-1.5">Host a Watch Party</h2>
-              <p className="text-xs text-gray-400 leading-relaxed">
-                Pick a movie from the catalog or paste a video link (YouTube, Dropbox, Drive). We'll set up your room and give you an invite link.
+              <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight leading-tight mb-2">
+                Join Party: <span className="text-cinema-accent font-mono">{invitedRoomId}</span>
+              </h1>
+              <p className="text-xs sm:text-sm text-gray-400">
+                Choose your display name below and jump in to watch with your friend in real-time sync.
               </p>
             </div>
-            <button
-              onClick={onStartCreate}
-              className="mt-6 w-full py-3 bg-cinema-accent hover:bg-cinema-accentHover text-white rounded-xl text-sm font-bold shadow-lg shadow-cinema-accent/30 transition active:scale-95 flex items-center justify-center gap-2"
+
+            {/* Prominent Name Input & Instant Join Card */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                onJoinRoom(invitedRoomId);
+              }}
+              className="bg-cinema-800/95 border-2 border-cinema-700/80 hover:border-cinema-accent/60 focus-within:border-cinema-accent rounded-2xl p-5 shadow-2xl backdrop-blur-md text-left space-y-4"
             >
-              <span>Create a Room</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Card 2: Join a Room */}
-          <div className="bg-cinema-800/90 border border-cinema-700 hover:border-cinema-blue/80 rounded-2xl p-6 flex flex-col justify-between shadow-xl transition hover:-translate-y-1">
-            <div>
-              <div className="w-12 h-12 rounded-xl bg-cinema-blue/20 border border-cinema-blue/40 flex items-center justify-center text-cinema-blue mb-4">
-                <Users className="w-6 h-6" />
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label htmlFor="invited-user-name" className="text-xs uppercase tracking-wider text-gray-300 font-bold flex items-center gap-2">
+                    <User className="w-4 h-4 text-cinema-accent" />
+                    <span>Your Display Name</span>
+                  </label>
+                  <span className="text-[11px] text-gray-400">Visible to friends</span>
+                </div>
+                <input
+                  id="invited-user-name"
+                  type="text"
+                  value={userName}
+                  onChange={(e) => {
+                    const val = e.target.value.substring(0, 24);
+                    onUpdateUserName(val);
+                  }}
+                  placeholder="Enter your name (e.g. Rahul)..."
+                  maxLength={24}
+                  autoFocus
+                  required
+                  className="w-full px-4 py-3 bg-cinema-900 border border-cinema-700/80 rounded-xl text-base sm:text-lg font-bold text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cinema-accent/50 transition shadow-inner"
+                />
               </div>
-              <h2 className="text-lg font-bold text-white mb-1.5">Join Existing Party</h2>
-              <p className="text-xs text-gray-400 leading-relaxed mb-4">
-                Got a code or invite link from a friend? Enter it below to jump directly into their party.
-              </p>
-            </div>
 
-            <form onSubmit={handleJoinSubmit} className="space-y-2 mt-auto">
-              <input
-                type="text"
-                placeholder="Enter room code or paste link..."
-                value={joinInput}
-                onChange={(e) => setJoinInput(e.target.value)}
-                className="w-full px-3 py-2 bg-cinema-900 border border-cinema-700 rounded-xl text-xs sm:text-sm text-white placeholder-gray-500 font-mono focus:outline-none focus:ring-1 focus:ring-cinema-blue"
-              />
-              {joinError && <p className="text-xs text-rose-400 font-medium">{joinError}</p>}
               <button
                 type="submit"
-                className="w-full py-2.5 bg-cinema-700 hover:bg-cinema-600 text-white rounded-xl text-xs sm:text-sm font-bold transition active:scale-95 flex items-center justify-center gap-2"
+                className="w-full py-3.5 bg-cinema-accent hover:bg-cinema-accentHover text-white rounded-xl text-base font-bold shadow-lg shadow-cinema-accent/40 transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
               >
-                <span>Enter Party</span>
-                <ArrowRight className="w-4 h-4" />
+                <span>Join Watch Party</span>
+                <ArrowRight className="w-5 h-5" />
               </button>
             </form>
+
+            <div>
+              <button
+                type="button"
+                onClick={onStartCreate}
+                className="text-xs text-gray-400 hover:text-gray-200 transition underline underline-offset-4 cursor-pointer"
+              >
+                Or host a new party instead
+              </button>
+            </div>
           </div>
-        </div>
+        ) : (
+          /* Standard Lobby: Host vs Join */
+          <>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-cinema-800 border border-cinema-700 text-xs text-gray-300 mb-6 shadow-sm">
+              <Sparkles className="w-3.5 h-3.5 text-cinema-accent" />
+              <span>Peer-to-Peer Real-Time Video Sync</span>
+            </div>
+
+            <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight leading-tight max-w-2xl mx-auto mb-4">
+              Watch Movies Together, <span className="text-cinema-accent">In Perfect Sync.</span>
+            </h1>
+            <p className="text-sm sm:text-base text-gray-400 max-w-xl mx-auto mb-6 leading-relaxed">
+              Stream movies from YouTube, Google Drive, Dropbox, or free catalogs with your friend in real-time. Zero downloads, zero screen sharing.
+            </p>
+
+            {/* Prominent Onboarding: Display Name Input */}
+            <div className="max-w-xl mx-auto mb-10">
+              <div className="bg-cinema-800/95 border-2 border-cinema-700/80 hover:border-cinema-accent/60 focus-within:border-cinema-accent rounded-2xl p-4 sm:p-5 shadow-2xl backdrop-blur-md transition-all text-left">
+                <div className="flex items-center justify-between mb-2">
+                  <label htmlFor="user-display-name" className="text-xs uppercase tracking-wider text-gray-300 font-bold flex items-center gap-2">
+                    <User className="w-4 h-4 text-cinema-accent" />
+                    <span>Your Name in Watch Party</span>
+                  </label>
+                  <span className="text-[11px] text-gray-400">Visible to friends</span>
+                </div>
+                <div className="relative">
+                  <input
+                    id="user-display-name"
+                    type="text"
+                    value={userName}
+                    onChange={(e) => {
+                      const val = e.target.value.substring(0, 24);
+                      onUpdateUserName(val);
+                    }}
+                    placeholder="Enter your name (e.g. Shreyas)..."
+                    maxLength={24}
+                    className="w-full px-4 py-3 bg-cinema-900 border border-cinema-700/80 rounded-xl text-base sm:text-lg font-bold text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cinema-accent/50 transition shadow-inner"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Action Cards: Create Room vs Join Room */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-2xl mx-auto text-left">
+              {/* Card 1: Create a Room */}
+              <div className="bg-cinema-800/90 border border-cinema-700 hover:border-cinema-accent/80 rounded-2xl p-6 flex flex-col justify-between shadow-xl transition hover:-translate-y-1">
+                <div>
+                  <div className="w-12 h-12 rounded-xl bg-cinema-accent/20 border border-cinema-accent/40 flex items-center justify-center text-cinema-accent mb-4">
+                    <PlusCircle className="w-6 h-6" />
+                  </div>
+                  <h2 className="text-lg font-bold text-white mb-1.5">Host a Watch Party</h2>
+                  <p className="text-xs text-gray-400 leading-relaxed">
+                    Pick a movie from the catalog or paste a video link (YouTube, Dropbox, Drive). We'll set up your room and give you an invite link.
+                  </p>
+                </div>
+                <button
+                  onClick={onStartCreate}
+                  className="mt-6 w-full py-3 bg-cinema-accent hover:bg-cinema-accentHover text-white rounded-xl text-sm font-bold shadow-lg shadow-cinema-accent/30 transition active:scale-95 flex items-center justify-center gap-2"
+                >
+                  <span>Create a Room</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Card 2: Join a Room */}
+              <div className="bg-cinema-800/90 border border-cinema-700 hover:border-cinema-blue/80 rounded-2xl p-6 flex flex-col justify-between shadow-xl transition hover:-translate-y-1">
+                <div>
+                  <div className="w-12 h-12 rounded-xl bg-cinema-blue/20 border border-cinema-blue/40 flex items-center justify-center text-cinema-blue mb-4">
+                    <Users className="w-6 h-6" />
+                  </div>
+                  <h2 className="text-lg font-bold text-white mb-1.5">Join Existing Party</h2>
+                  <p className="text-xs text-gray-400 leading-relaxed mb-4">
+                    Got a code or invite link from a friend? Enter it below to jump directly into their party.
+                  </p>
+                </div>
+
+                <form onSubmit={handleJoinSubmit} className="space-y-2 mt-auto">
+                  <input
+                    type="text"
+                    placeholder="Enter room code or paste link..."
+                    value={joinInput}
+                    onChange={(e) => setJoinInput(e.target.value)}
+                    className="w-full px-3 py-2 bg-cinema-900 border border-cinema-700 rounded-xl text-xs sm:text-sm text-white placeholder-gray-500 font-mono focus:outline-none focus:ring-1 focus:ring-cinema-blue"
+                  />
+                  {joinError && <p className="text-xs text-rose-400 font-medium">{joinError}</p>}
+                  <button
+                    type="submit"
+                    className="w-full py-2.5 bg-cinema-700 hover:bg-cinema-600 text-white rounded-xl text-xs sm:text-sm font-bold transition active:scale-95 flex items-center justify-center gap-2"
+                  >
+                    <span>Enter Party</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </form>
+              </div>
+            </div>
+          </>
+        )}
 
         {/* Feature Highlights */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-3xl mx-auto mt-12 pt-8 border-t border-cinema-800 text-left">

@@ -19,8 +19,8 @@ const initialParams = new URLSearchParams(window.location.search);
 const initialRoomParam = initialParams.get('room');
 
 export const App: React.FC = () => {
-  // If ?room= is in the URL, user skips lobby and enters directly as guest
-  const [isLobby, setIsLobby] = useState<boolean>(!initialRoomParam);
+  // Always start in the Lobby so the user can enter/confirm their display name (invited room is prefilled if present)
+  const [isLobby, setIsLobby] = useState<boolean>(true);
   const [roomId, setRoomId] = useState<string>(initialRoomParam || '');
   const [isHost, setIsHost] = useState<boolean>(!initialRoomParam);
 
