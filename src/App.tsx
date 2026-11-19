@@ -54,6 +54,7 @@ export const App: React.FC = () => {
 
   // Media & Sync state
   const [currentMovie, setCurrentMovie] = useState<Movie | null>(CURATED_MOVIES[0]);
+  const [hasDirectMovieStream, setHasDirectMovieStream] = useState<boolean>(false);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [countdown, setCountdown] = useState<number | null>(null);
@@ -401,12 +402,12 @@ export const App: React.FC = () => {
       setIsPlaying(false);
       broadcastSync('PAUSE', {});
     } else {
-      // If embed mode, run 3s sync countdown so both viewers click play together
-      if (currentMovie?.streamType === 'embed') {
+      // If unextracted embed mode, run 3s sync countdown so both viewers click play together
+      if (currentMovie?.streamType === 'embed' && !hasDirectMovieStream) {
         triggerLocalCountdown('You');
         broadcastSync('COUNTDOWN_START', {});
       } else {
-        // YouTube & Direct streams: Instant synchronized Play!
+        // YouTube, Direct streams, and Extracted Clean Streams: Instant synchronized Play!
         setIsPlaying(true);
         broadcastSync('PLAY', {});
       }
@@ -422,6 +423,7 @@ export const App: React.FC = () => {
 
   const handleSelectMovie = (movie: Movie) => {
     if (isHostLocked && !isHost) return;
+    setHasDirectMovieStream(false);
     setCurrentMovie(movie);
     setCurrentTime(0);
     setIsPlaying(false);
@@ -580,6 +582,7 @@ export const App: React.FC = () => {
             onBufferingEnd={handleBufferingEnd}
             onSelectServer={handleSelectServer}
             onOpenMovieCatalog={() => setIsCatalogOpen(true)}
+            onDirectStreamChange={setHasDirectMovieStream}
           />
 
           {/* Sync Controller Bar with ONE Unified Play/Pause Button */}
@@ -598,7 +601,7 @@ export const App: React.FC = () => {
             onTogglePlay={handleUnifiedPlayToggle}
             onSeekRelative={handleSeekRelative}
             onForceResumeBuffer={handleForceResumeBuffer}
-            isEmbedMode={currentMovie?.streamType === 'embed'}
+            isEmbedMode={currentMovie?.streamType === 'embed' && !hasDirectMovieStream}
           />
 
           {/* Desktop-Only Movie Info Banner */}
