@@ -3,8 +3,9 @@ import Hls from 'hls.js';
 import type { Movie } from '../types';
 import { getEmbedUrl, extractYouTubeId, EMBED_SERVERS } from '../services/embedService';
 import { resolveMovieStream, type ResolvedStream } from '../services/streamResolverService';
+import { webTorrentService, type TorrentStatus } from '../services/webTorrentService';
 import { YouTubePlayer } from './YouTubePlayer';
-import { Play, ShieldCheck, ShieldAlert, Server, Sparkles, Loader2 } from 'lucide-react';
+import { Play, ShieldCheck, ShieldAlert, Server, Sparkles, Loader2, Radio, Wifi } from 'lucide-react';
 
 interface VideoPlayerProps {
   movie: Movie | null;
@@ -42,6 +43,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [adShieldEnabled, setAdShieldEnabled] = useState<boolean>(false);
   const [resolvedStream, setResolvedStream] = useState<ResolvedStream | null>(null);
   const [isResolvingStream, setIsResolvingStream] = useState<boolean>(false);
+  const [torrentStatus, setTorrentStatus] = useState<TorrentStatus | null>(null);
+  const [isTorrentLoading, setIsTorrentLoading] = useState<boolean>(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
   const isInternalSeeking = useRef<boolean>(false);
@@ -83,6 +86,43 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       : resolvedStream?.success && resolvedStream.streamUrl
       ? resolvedStream.streamUrl
       : null;
+
+  const isNativeVideo = Boolean(directStreamUrl || movie?.streamType === 'webtorrent');
+
+  // Setup WebTorrent P2P Streaming
+  useEffect(() => {
+    if (!movie || movie.streamType !== 'webtorrent' || !movie.streamUrl) {
+      webTorrentService.stopCurrentTorrent();
+      setTorrentStatus(null);
+      setIsTorrentLoading(false);
+      return;
+    }
+
+    const video = videoRef.current;
+    if (!video) return;
+
+    let isMounted = true;
+    setIsTorrentLoading(true);
+
+    webTorrentService
+      .streamTorrent(movie.streamUrl, video, (status) => {
+        if (!isMounted) return;
+        setTorrentStatus(status);
+        if (status.isReady) {
+          setIsTorrentLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        console.error('[WebTorrent] Streaming error:', err);
+        setIsTorrentLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+      webTorrentService.stopCurrentTorrent();
+    };
+  }, [movie?.streamType, movie?.streamUrl]);
 
   // Setup HLS or direct native video playback
   useEffect(() => {
@@ -129,19 +169,19 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   // Sync play/pause changes to native video element
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !directStreamUrl) return;
+    if (!video || !isNativeVideo) return;
 
     if (isPlaying && video.paused) {
       video.play().catch(() => {});
     } else if (!isPlaying && !video.paused) {
       video.pause();
     }
-  }, [isPlaying, directStreamUrl]);
+  }, [isPlaying, isNativeVideo]);
 
   // Sync external seek changes to native video element
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !directStreamUrl) return;
+    if (!video || !isNativeVideo) return;
 
     if (Math.abs(video.currentTime - currentTime) > 2) {
       isInternalSeeking.current = true;
@@ -150,14 +190,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         isInternalSeeking.current = false;
       }, 300);
     }
-  }, [currentTime, directStreamUrl]);
+  }, [currentTime, isNativeVideo]);
 
   // Sync playback rate to native video element
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !directStreamUrl) return;
+    if (!video || !isNativeVideo) return;
     video.playbackRate = playbackRate;
-  }, [playbackRate, directStreamUrl]);
+  }, [playbackRate, isNativeVideo]);
 
   // Listen to postMessage events from modern embed providers (e.g. vidlink.pro)
   useEffect(() => {
@@ -228,8 +268,28 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           </div>
         )}
 
-        {/* Source 1: Clean Native HTML5 / HLS Direct Stream (Scraped or Direct Link) */}
-        {directStreamUrl && (
+        {/* WebTorrent P2P Connecting Skeleton */}
+        {movie.streamType === 'webtorrent' && isTorrentLoading && (
+          <div className="absolute inset-0 bg-black/85 backdrop-blur-sm z-20 flex flex-col items-center justify-center p-4">
+            <Radio className="w-9 h-9 text-violet-400 animate-pulse mb-3" />
+            <p className="text-xs sm:text-sm font-bold text-white mb-1">
+              Connecting to P2P WebTorrent Swarm
+            </p>
+            <p className="text-[11px] text-gray-400 max-w-sm text-center mb-3">
+              Discovering WebRTC seeders & downloading initial video metadata...
+            </p>
+            {torrentStatus && (
+              <div className="flex items-center gap-2 text-[10px] text-violet-300 bg-violet-950/60 border border-violet-800/60 px-3 py-1 rounded-full">
+                <span>Peers: {torrentStatus.numPeers}</span>
+                <span>•</span>
+                <span>Speed: {(torrentStatus.downloadSpeed / 1024 / 1024).toFixed(1)} MB/s</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Source 1: Clean Native HTML5 / HLS Direct Stream or WebTorrent */}
+        {isNativeVideo && (
           <video
             ref={videoRef}
             className="w-full h-full object-contain"
@@ -246,7 +306,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         )}
 
         {/* Source 2: Fallback Movie Embed with Smart Ad-Shield (When direct stream unavailable) */}
-        {!directStreamUrl && movie.streamType === 'embed' && movie.tmdbId && (
+        {!isNativeVideo && movie.streamType === 'embed' && movie.tmdbId && (
           <iframe
             key={`${movie.tmdbId}-${activeServerId}-${adShieldEnabled}`}
             src={getEmbedUrl(activeServerId, movie.tmdbId, movie.imdbId)}
@@ -264,7 +324,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         )}
 
         {/* Source 2B: Custom Embeds (Google Drive Preview, etc.) */}
-        {!directStreamUrl && movie.streamType === 'embed' && !movie.tmdbId && movie.streamUrl && (
+        {!isNativeVideo && movie.streamType === 'embed' && !movie.tmdbId && movie.streamUrl && (
           <iframe
             key={movie.streamUrl}
             src={movie.streamUrl}
@@ -299,7 +359,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         )}
 
         {/* Synchronized 3-2-1 Countdown Overlay (for fallback embed mode) */}
-        {!directStreamUrl && countdown !== null && (
+        {!isNativeVideo && countdown !== null && (
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm z-20 flex flex-col items-center justify-center animate-fadeIn pointer-events-none">
             <div className="text-center">
               <span className="text-xs uppercase tracking-widest text-cinema-accent font-extrabold mb-1 block">
@@ -323,6 +383,16 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           <p className="text-[10px] text-gray-400 truncate flex items-center gap-1.5">
             {movie.streamType === 'youtube' ? (
               <span className="text-emerald-400 font-semibold">YouTube Auto-Sync</span>
+            ) : movie.streamType === 'webtorrent' ? (
+              <span className="text-violet-400 font-semibold flex items-center gap-1.5">
+                <Wifi className="w-3 h-3 text-violet-400" />
+                <span>WebTorrent P2P Stream (100% Sync Control)</span>
+                {torrentStatus && torrentStatus.numPeers > 0 && (
+                  <span className="text-[10px] text-gray-300 bg-violet-500/20 px-1.5 py-0.5 rounded border border-violet-500/30">
+                    {torrentStatus.numPeers} Peers • {(torrentStatus.downloadSpeed / 1024 / 1024).toFixed(1)} MB/s • {(torrentStatus.progress * 100).toFixed(0)}%
+                  </span>
+                )}
+              </span>
             ) : directStreamUrl ? (
               <span className="text-emerald-400 font-semibold flex items-center gap-1">
                 <Sparkles className="w-3 h-3 text-emerald-400" />
@@ -340,7 +410,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
         <div className="flex items-center gap-1.5">
           {/* Ad-Shield Toggle Button (only shown for fallback embed movies) */}
-          {!directStreamUrl && movie.streamType === 'embed' && (
+          {!isNativeVideo && movie.streamType === 'embed' && (
             <button
               onClick={() => setAdShieldEnabled(!adShieldEnabled)}
               title={
@@ -369,7 +439,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           )}
 
           {/* Quick Server Switcher for Fallback Embeds */}
-          {!directStreamUrl && movie.streamType === 'embed' && (
+          {!isNativeVideo && movie.streamType === 'embed' && (
             <div className="flex items-center gap-1">
               <Server className="w-3.5 h-3.5 text-gray-400 hidden sm:inline" />
               <select

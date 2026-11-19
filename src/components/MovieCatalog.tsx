@@ -71,6 +71,9 @@ export const MovieCatalog: React.FC<MovieCatalogProps> = ({
     } else if (type === 'gdrive') {
       streamType = 'embed';
       finalUrl = formatGoogleDriveUrl(rawUrl);
+    } else if (type === 'magnet') {
+      streamType = 'webtorrent';
+      finalUrl = rawUrl;
     } else if (type === 'direct') {
       streamType = 'direct';
       finalUrl = rawUrl;
@@ -78,7 +81,16 @@ export const MovieCatalog: React.FC<MovieCatalogProps> = ({
 
     const movie: Movie = {
       id: `custom-${Date.now()}`,
-      title: type === 'youtube' ? 'YouTube Video' : type === 'dropbox' ? 'Dropbox Movie' : type === 'gdrive' ? 'Google Drive Movie' : 'Custom Video Stream',
+      title:
+        type === 'youtube'
+          ? 'YouTube Video'
+          : type === 'dropbox'
+          ? 'Dropbox Movie'
+          : type === 'gdrive'
+          ? 'Google Drive Movie'
+          : type === 'magnet'
+          ? 'WebTorrent Movie'
+          : 'Custom Video Stream',
       streamType,
       streamUrl: finalUrl,
     };
@@ -120,6 +132,9 @@ export const MovieCatalog: React.FC<MovieCatalogProps> = ({
     } else if (type === 'gdrive') {
       streamType = 'embed';
       finalUrl = formatGoogleDriveUrl(url);
+    } else if (type === 'magnet') {
+      streamType = 'webtorrent';
+      finalUrl = url;
     } else if (type === 'direct') {
       streamType = 'direct';
       finalUrl = url;
@@ -127,7 +142,15 @@ export const MovieCatalog: React.FC<MovieCatalogProps> = ({
 
     const movie: Movie = {
       id: `custom-${Date.now()}`,
-      title: customTitle.trim() || (type === 'youtube' ? 'YouTube Video' : type === 'dropbox' ? 'Dropbox Movie' : 'Custom Video Stream'),
+      title:
+        customTitle.trim() ||
+        (type === 'youtube'
+          ? 'YouTube Video'
+          : type === 'dropbox'
+          ? 'Dropbox Movie'
+          : type === 'magnet'
+          ? 'WebTorrent Movie'
+          : 'Custom Video Stream'),
       streamType,
       streamUrl: finalUrl,
     };

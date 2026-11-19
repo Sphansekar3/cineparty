@@ -1,4 +1,4 @@
-export type StreamSourceType = 'embed' | 'direct' | 'youtube';
+export type StreamSourceType = 'embed' | 'direct' | 'youtube' | 'webtorrent';
 
 export interface Movie {
   id: string | number;

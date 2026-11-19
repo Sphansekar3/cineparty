@@ -49,11 +49,21 @@ export function formatGoogleDriveUrl(url: string): string {
   return url;
 }
 
-export type ParsedUrlType = 'youtube' | 'dropbox' | 'gdrive' | 'direct' | 'unknown';
+export type ParsedUrlType = 'youtube' | 'dropbox' | 'gdrive' | 'direct' | 'magnet' | 'unknown';
 
 export function parseVideoUrlType(url: string): ParsedUrlType {
   if (!url) return 'unknown';
   const cleanUrl = url.trim().toLowerCase();
+
+  // Magnet link or Torrent InfoHash detection
+  if (
+    cleanUrl.startsWith('magnet:?') ||
+    cleanUrl.startsWith('magnet:') ||
+    /^[a-f0-9]{40}$/i.test(cleanUrl) ||
+    /^[a-z2-7]{32}$/i.test(cleanUrl)
+  ) {
+    return 'magnet';
+  }
 
   // YouTube detection
   const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;

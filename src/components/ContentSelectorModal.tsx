@@ -96,6 +96,9 @@ export const ContentSelectorModal: React.FC<ContentSelectorModalProps> = ({
     } else if (type === 'gdrive') {
       streamType = 'embed';
       finalUrl = formatGoogleDriveUrl(rawUrl);
+    } else if (type === 'magnet') {
+      streamType = 'webtorrent';
+      finalUrl = rawUrl;
     } else if (type === 'direct') {
       streamType = 'direct';
       finalUrl = rawUrl;
@@ -103,7 +106,15 @@ export const ContentSelectorModal: React.FC<ContentSelectorModalProps> = ({
 
     const movie: Movie = {
       id: `custom-${Date.now()}`,
-      title: videoTitle.trim() || (type === 'youtube' ? 'YouTube Video' : type === 'dropbox' ? 'Dropbox Movie' : 'Video Stream'),
+      title:
+        videoTitle.trim() ||
+        (type === 'youtube'
+          ? 'YouTube Video'
+          : type === 'dropbox'
+          ? 'Dropbox Movie'
+          : type === 'magnet'
+          ? 'WebTorrent Movie'
+          : 'Video Stream'),
       streamType,
       streamUrl: finalUrl,
     };
@@ -270,6 +281,10 @@ export const ContentSelectorModal: React.FC<ContentSelectorModalProps> = ({
                 <span className="text-xs font-bold text-gray-300 block">Supported Video Links:</span>
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className="flex items-center gap-1.5 text-gray-300">
+                    <span className="w-2 h-2 rounded-full bg-violet-400" />
+                    <span><strong>Magnet / WebTorrent</strong> (P2P Full Control)</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-gray-300">
                     <span className="w-2 h-2 rounded-full bg-red-500" />
                     <span><strong>YouTube</strong> (Auto-Sync)</span>
                   </div>
@@ -278,24 +293,60 @@ export const ContentSelectorModal: React.FC<ContentSelectorModalProps> = ({
                     <span><strong>Dropbox</strong> (Auto-Stream)</span>
                   </div>
                   <div className="flex items-center gap-1.5 text-gray-300">
-                    <span className="w-2 h-2 rounded-full bg-amber-400" />
-                    <span><strong>Google Drive</strong> (Embed)</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-gray-300">
                     <span className="w-2 h-2 rounded-full bg-emerald-400" />
                     <span><strong>Direct MP4 / M3U8</strong></span>
+                  </div>
+                </div>
+
+                {/* 1-Click P2P WebTorrent Demos */}
+                <div className="pt-2 border-t border-cinema-700/60 mt-2">
+                  <span className="text-[11px] text-gray-400 block mb-1.5 font-medium">Quick P2P WebTorrent Demos (1-Click Test):</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setVideoUrl('magnet:?xt=urn:btih:08ada5a7a6183aae1e09be831b409745d045ab56&dn=Sintel&tr=wss%3A%2F%2Ftracker.btorrent.xyz&tr=wss%3A%2F%2Ftracker.openwebtorrent.com&tr=wss%3A%2F%2Ftracker.webtorrent.dev');
+                        setVideoTitle('Sintel (4K Open Cinema)');
+                        setDetectedType('magnet');
+                      }}
+                      className="px-2 py-1 bg-cinema-700 hover:bg-cinema-600 rounded-lg text-[11px] text-gray-200 transition"
+                    >
+                      🎬 Sintel (1080p WebTorrent)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setVideoUrl('magnet:?xt=urn:btih:2b124f9f00522d64ec8567ab62081340dd619860&dn=Tears+of+Steel&tr=wss%3A%2F%2Ftracker.btorrent.xyz&tr=wss%3A%2F%2Ftracker.openwebtorrent.com&tr=wss%3A%2F%2Ftracker.webtorrent.dev');
+                        setVideoTitle('Tears of Steel (Sci-Fi)');
+                        setDetectedType('magnet');
+                      }}
+                      className="px-2 py-1 bg-cinema-700 hover:bg-cinema-600 rounded-lg text-[11px] text-gray-200 transition"
+                    >
+                      🚀 Tears of Steel (Sci-Fi)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setVideoUrl('magnet:?xt=urn:btih:dd8255ecdc7ca55fb0bbf81323d87062db1f6d1c&dn=Big+Buck+Bunny&tr=wss%3A%2F%2Ftracker.btorrent.xyz&tr=wss%3A%2F%2Ftracker.openwebtorrent.com&tr=wss%3A%2F%2Ftracker.webtorrent.dev');
+                        setVideoTitle('Big Buck Bunny');
+                        setDetectedType('magnet');
+                      }}
+                      className="px-2 py-1 bg-cinema-700 hover:bg-cinema-600 rounded-lg text-[11px] text-gray-200 transition"
+                    >
+                      🐰 Big Buck Bunny
+                    </button>
                   </div>
                 </div>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-gray-300 mb-1">
-                  Video URL *
+                  Video URL or Magnet Link *
                 </label>
                 <div className="relative">
                   <input
-                    type="url"
-                    placeholder="Paste YouTube, Dropbox, Drive, or MP4 link..."
+                    type="text"
+                    placeholder="Paste Magnet link, YouTube, Dropbox, or MP4 link..."
                     value={videoUrl}
                     onChange={(e) => handleUrlChange(e.target.value)}
                     autoFocus
@@ -310,7 +361,9 @@ export const ContentSelectorModal: React.FC<ContentSelectorModalProps> = ({
                     <Check className="w-3.5 h-3.5" />
                     <span>
                       Detected:{' '}
-                      {detectedType === 'youtube'
+                      {detectedType === 'magnet'
+                        ? 'Magnet / WebTorrent Stream (100% Native Sync & Control)'
+                        : detectedType === 'youtube'
                         ? 'YouTube Video (Automated Frame Sync)'
                         : detectedType === 'dropbox'
                         ? 'Dropbox Video (Auto-converted to high-speed stream)'
