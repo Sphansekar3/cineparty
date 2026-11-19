@@ -71,61 +71,71 @@ export const SyncController: React.FC<SyncControllerProps> = ({
           )}
         </div>
 
-        {/* Playback Controls (ONE Single Play/Pause Button!) */}
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* Rewind 10s */}
-          <button
-            onClick={() => onSeekRelative(-10)}
-            disabled={!canControl || !!bufferingInfo}
-            title="Rewind 10 seconds"
-            className="p-1.5 sm:px-2.5 sm:py-1.5 bg-cinema-700 hover:bg-cinema-600 active:scale-95 disabled:opacity-40 text-gray-200 rounded-lg text-xs font-medium flex items-center gap-1 transition"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">-10s</span>
-          </button>
+        {/* Playback Controls */}
+        {isEmbedMode ? (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onTogglePlay}
+              disabled={!canControl}
+              title="Broadcast 3-2-1 countdown so everyone starts/resumes at the exact same second"
+              className="px-3.5 py-1.5 rounded-lg text-xs font-bold shadow-md transition active:scale-95 disabled:opacity-40 flex items-center gap-1.5 bg-gradient-to-r from-cinema-accent to-red-600 hover:from-cinema-accentHover hover:to-red-700 text-white shadow-cinema-accent/30"
+            >
+              <Zap className="w-3.5 h-3.5 fill-white text-white" />
+              <span>⚡ Sync 3s Countdown</span>
+            </button>
+            <span className="text-[11px] text-gray-400 hidden md:inline">
+              Use video controls inside screen • Tap Countdown to sync start
+            </span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* Rewind 10s */}
+            <button
+              onClick={() => onSeekRelative(-10)}
+              disabled={!canControl || !!bufferingInfo}
+              title="Rewind 10 seconds"
+              className="p-1.5 sm:px-2.5 sm:py-1.5 bg-cinema-700 hover:bg-cinema-600 active:scale-95 disabled:opacity-40 text-gray-200 rounded-lg text-xs font-medium flex items-center gap-1 transition"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">-10s</span>
+            </button>
 
-          {/* SINGLE Unified Play / Pause Button */}
-          <button
-            onClick={onTogglePlay}
-            disabled={!canControl || !!bufferingInfo}
-            title={isPlaying ? 'Pause for everyone' : 'Play for everyone in sync'}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold shadow-md transition active:scale-95 disabled:opacity-40 flex items-center gap-1.5 ${
-              isPlaying
-                ? 'bg-cinema-700 hover:bg-cinema-600 text-white'
-                : isEmbedMode
-                ? 'bg-gradient-to-r from-cinema-accent to-red-600 hover:from-cinema-accentHover hover:to-red-700 text-white shadow-cinema-accent/30'
-                : 'bg-cinema-accent hover:bg-cinema-accentHover text-white shadow-cinema-accent/30'
-            }`}
-          >
-            {isPlaying ? (
-              <>
-                <Pause className="w-3.5 h-3.5 fill-white text-white" />
-                <span>Pause</span>
-              </>
-            ) : isEmbedMode ? (
-              <>
-                <Zap className="w-3.5 h-3.5 fill-white text-white" />
-                <span>Sync Play (3s)</span>
-              </>
-            ) : (
-              <>
-                <Play className="w-3.5 h-3.5 fill-white text-white" />
-                <span>Play</span>
-              </>
-            )}
-          </button>
+            {/* SINGLE Unified Play / Pause Button */}
+            <button
+              onClick={onTogglePlay}
+              disabled={!canControl || !!bufferingInfo}
+              title={isPlaying ? 'Pause for everyone' : 'Play for everyone in sync'}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold shadow-md transition active:scale-95 disabled:opacity-40 flex items-center gap-1.5 ${
+                isPlaying
+                  ? 'bg-cinema-700 hover:bg-cinema-600 text-white'
+                  : 'bg-cinema-accent hover:bg-cinema-accentHover text-white shadow-cinema-accent/30'
+              }`}
+            >
+              {isPlaying ? (
+                <>
+                  <Pause className="w-3.5 h-3.5 fill-white text-white" />
+                  <span>Pause</span>
+                </>
+              ) : (
+                <>
+                  <Play className="w-3.5 h-3.5 fill-white text-white" />
+                  <span>Play</span>
+                </>
+              )}
+            </button>
 
-          {/* Fast-forward 10s */}
-          <button
-            onClick={() => onSeekRelative(10)}
-            disabled={!canControl || !!bufferingInfo}
-            title="Fast-forward 10 seconds"
-            className="p-1.5 sm:px-2.5 sm:py-1.5 bg-cinema-700 hover:bg-cinema-600 active:scale-95 disabled:opacity-40 text-gray-200 rounded-lg text-xs font-medium flex items-center gap-1 transition"
-          >
-            <RotateCw className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">+10s</span>
-          </button>
-        </div>
+            {/* Fast-forward 10s */}
+            <button
+              onClick={() => onSeekRelative(10)}
+              disabled={!canControl || !!bufferingInfo}
+              title="Fast-forward 10 seconds"
+              className="p-1.5 sm:px-2.5 sm:py-1.5 bg-cinema-700 hover:bg-cinema-600 active:scale-95 disabled:opacity-40 text-gray-200 rounded-lg text-xs font-medium flex items-center gap-1 transition"
+            >
+              <RotateCw className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">+10s</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Buffering Lock Alert Banner with 60s Failsafe countdown */}

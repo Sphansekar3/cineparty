@@ -50,7 +50,7 @@ export const App: React.FC = () => {
   const [connectionState, setConnectionState] = useState<ConnectionState>('connecting');
   const [peerCount, setPeerCount] = useState<number>(0);
   const [isHostLocked, setIsHostLocked] = useState<boolean>(false);
-  const [activeServerId, setActiveServerId] = useState<string>('vidlink');
+  const [activeServerId, setActiveServerId] = useState<string>('autoembed');
 
   // Media & Sync state
   const [currentMovie, setCurrentMovie] = useState<Movie | null>(CURATED_MOVIES[0]);
@@ -397,20 +397,21 @@ export const App: React.FC = () => {
   const handleUnifiedPlayToggle = () => {
     if (isHostLocked && !isHost) return;
 
+    if (currentMovie?.streamType === 'embed' && !hasDirectMovieStream) {
+      // In embed mode, trigger the 3-2-1 sync countdown so both viewers start/pause together
+      triggerLocalCountdown('You');
+      broadcastSync('COUNTDOWN_START', {});
+      return;
+    }
+
     if (isPlaying) {
       // Pause for everyone immediately
       setIsPlaying(false);
       broadcastSync('PAUSE', {});
     } else {
-      // If unextracted embed mode, run 3s sync countdown so both viewers click play together
-      if (currentMovie?.streamType === 'embed' && !hasDirectMovieStream) {
-        triggerLocalCountdown('You');
-        broadcastSync('COUNTDOWN_START', {});
-      } else {
-        // YouTube, Direct streams, and Extracted Clean Streams: Instant synchronized Play!
-        setIsPlaying(true);
-        broadcastSync('PLAY', {});
-      }
+      // YouTube, Direct streams, and Extracted Clean Streams: Instant synchronized Play!
+      setIsPlaying(true);
+      broadcastSync('PLAY', {});
     }
   };
 

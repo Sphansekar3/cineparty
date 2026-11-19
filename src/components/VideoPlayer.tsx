@@ -39,7 +39,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   onOpenMovieCatalog,
   onDirectStreamChange,
 }) => {
-  const [adShieldEnabled, setAdShieldEnabled] = useState<boolean>(true);
+  const [adShieldEnabled, setAdShieldEnabled] = useState<boolean>(false);
   const [resolvedStream, setResolvedStream] = useState<ResolvedStream | null>(null);
   const [isResolvingStream, setIsResolvingStream] = useState<boolean>(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);

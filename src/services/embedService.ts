@@ -2,14 +2,14 @@ import type { EmbedServer } from '../types';
 
 export const EMBED_SERVERS: EmbedServer[] = [
   {
-    id: 'vidlink',
-    name: 'Server 1 (VidLink - Fast & Clean)',
-    buildMovieUrl: (tmdbId) => `https://vidlink.pro/movie/${tmdbId}?primaryColor=e50914`,
+    id: 'autoembed',
+    name: 'Server 1 (AutoEmbed - Working)',
+    buildMovieUrl: (tmdbId) => `https://autoembed.me/movie/tmdb/${tmdbId}`,
   },
   {
-    id: 'autoembed',
-    name: 'Server 2 (AutoEmbed)',
-    buildMovieUrl: (tmdbId) => `https://autoembed.me/movie/tmdb/${tmdbId}`,
+    id: 'vidlink',
+    name: 'Server 2 (VidLink)',
+    buildMovieUrl: (tmdbId) => `https://vidlink.pro/movie/${tmdbId}?primaryColor=e50914`,
   },
   {
     id: 'vidsrc-to',
