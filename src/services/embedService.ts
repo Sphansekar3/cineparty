@@ -55,10 +55,12 @@ export function parseVideoUrlType(url: string): ParsedUrlType {
   if (!url) return 'unknown';
   const cleanUrl = url.trim().toLowerCase();
 
-  // Magnet link or Torrent InfoHash detection
+  // Magnet link or Torrent File / InfoHash detection
   if (
     cleanUrl.startsWith('magnet:?') ||
     cleanUrl.startsWith('magnet:') ||
+    cleanUrl.endsWith('.torrent') ||
+    cleanUrl.includes('.torrent?') ||
     /^[a-f0-9]{40}$/i.test(cleanUrl) ||
     /^[a-z2-7]{32}$/i.test(cleanUrl)
   ) {

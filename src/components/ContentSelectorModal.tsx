@@ -305,8 +305,8 @@ export const ContentSelectorModal: React.FC<ContentSelectorModalProps> = ({
                     <button
                       type="button"
                       onClick={() => {
-                        setVideoUrl('magnet:?xt=urn:btih:08ada5a7a6183aae1e09be831b409745d045ab56&dn=Sintel&tr=wss%3A%2F%2Ftracker.btorrent.xyz&tr=wss%3A%2F%2Ftracker.openwebtorrent.com&tr=wss%3A%2F%2Ftracker.webtorrent.dev');
-                        setVideoTitle('Sintel (4K Open Cinema)');
+                        setVideoUrl('https://webtorrent.io/torrents/sintel.torrent');
+                        setVideoTitle('Sintel (WebTorrent 1080p)');
                         setDetectedType('magnet');
                       }}
                       className="px-2 py-1 bg-cinema-700 hover:bg-cinema-600 rounded-lg text-[11px] text-gray-200 transition"
@@ -316,7 +316,7 @@ export const ContentSelectorModal: React.FC<ContentSelectorModalProps> = ({
                     <button
                       type="button"
                       onClick={() => {
-                        setVideoUrl('magnet:?xt=urn:btih:2b124f9f00522d64ec8567ab62081340dd619860&dn=Tears+of+Steel&tr=wss%3A%2F%2Ftracker.btorrent.xyz&tr=wss%3A%2F%2Ftracker.openwebtorrent.com&tr=wss%3A%2F%2Ftracker.webtorrent.dev');
+                        setVideoUrl('https://webtorrent.io/torrents/tears-of-steel.torrent');
                         setVideoTitle('Tears of Steel (Sci-Fi)');
                         setDetectedType('magnet');
                       }}
@@ -327,7 +327,7 @@ export const ContentSelectorModal: React.FC<ContentSelectorModalProps> = ({
                     <button
                       type="button"
                       onClick={() => {
-                        setVideoUrl('magnet:?xt=urn:btih:dd8255ecdc7ca55fb0bbf81323d87062db1f6d1c&dn=Big+Buck+Bunny&tr=wss%3A%2F%2Ftracker.btorrent.xyz&tr=wss%3A%2F%2Ftracker.openwebtorrent.com&tr=wss%3A%2F%2Ftracker.webtorrent.dev');
+                        setVideoUrl('https://webtorrent.io/torrents/big-buck-bunny.torrent');
                         setVideoTitle('Big Buck Bunny');
                         setDetectedType('magnet');
                       }}
