@@ -105,40 +105,61 @@ class WebTorrentService {
         (torrent: any) => {
           this.currentTorrent = torrent;
 
-          // Find video file
-          const file =
-            torrent.files.find((f: any) => {
-              const ext = f.name.toLowerCase();
-              return (
-                ext.endsWith('.mp4') ||
-                ext.endsWith('.mkv') ||
-                ext.endsWith('.webm') ||
-                ext.endsWith('.avi') ||
-                ext.endsWith('.mov')
-              );
-            }) || torrent.files[0];
+          const handleReady = () => {
+            // Find video file
+            const file =
+              torrent.files?.find((f: any) => {
+                const ext = f.name.toLowerCase();
+                return (
+                  ext.endsWith('.mp4') ||
+                  ext.endsWith('.mkv') ||
+                  ext.endsWith('.webm') ||
+                  ext.endsWith('.avi') ||
+                  ext.endsWith('.mov')
+                );
+              }) || torrent.files?.[0];
 
-          if (!file) {
-            reject(new Error('No video file found in this torrent.'));
-            return;
+            if (!file) {
+              reject(new Error('No video file found in this torrent.'));
+              return;
+            }
+
+            // Render stream directly into CineParty's native <video> element
+            file.renderTo(videoElement, { autoplay: false }, (err: any) => {
+              if (err) {
+                console.warn('[WebTorrent] renderTo notice:', err);
+              }
+            });
+
+            // Send ready status
+            onStatusUpdate?.({
+              name: file.name,
+              progress: torrent.progress || 0,
+              downloadSpeed: torrent.downloadSpeed || 0,
+              uploadSpeed: torrent.uploadSpeed || 0,
+              numPeers: torrent.numPeers || 0,
+              timeRemaining: torrent.timeRemaining || 0,
+              isReady: true,
+            });
+
+            resolve(torrent);
+          };
+
+          if (torrent.ready) {
+            handleReady();
+          } else {
+            torrent.once('ready', handleReady);
           }
 
-          // Render stream directly into CineParty's native <video> element
-          file.renderTo(videoElement, { autoplay: false }, (err: any) => {
-            if (err) {
-              console.warn('[WebTorrent] renderTo notice:', err);
-            }
-          });
-
-          // Send initial status
+          // Send immediate initial status
           onStatusUpdate?.({
-            name: file.name,
-            progress: torrent.progress,
-            downloadSpeed: torrent.downloadSpeed,
-            uploadSpeed: torrent.uploadSpeed,
-            numPeers: torrent.numPeers,
-            timeRemaining: torrent.timeRemaining,
-            isReady: true,
+            name: torrent.name || 'P2P Stream',
+            progress: torrent.progress || 0,
+            downloadSpeed: torrent.downloadSpeed || 0,
+            uploadSpeed: torrent.uploadSpeed || 0,
+            numPeers: torrent.numPeers || 0,
+            timeRemaining: torrent.timeRemaining || 0,
+            isReady: Boolean(torrent.ready),
           });
 
           // Interval progress updates
@@ -148,23 +169,23 @@ class WebTorrentService {
               return;
             }
             onStatusUpdate?.({
-              name: file.name,
-              progress: torrent.progress,
-              downloadSpeed: torrent.downloadSpeed,
-              uploadSpeed: torrent.uploadSpeed,
-              numPeers: torrent.numPeers,
-              timeRemaining: torrent.timeRemaining,
-              isReady: true,
+              name: this.currentTorrent.name || 'P2P Stream',
+              progress: torrent.progress || 0,
+              downloadSpeed: torrent.downloadSpeed || 0,
+              uploadSpeed: torrent.uploadSpeed || 0,
+              numPeers: torrent.numPeers || 0,
+              timeRemaining: torrent.timeRemaining || 0,
+              isReady: Boolean(torrent.ready),
             });
           }, 1000);
 
           torrent.on('error', (err: any) => {
             onStatusUpdate?.({
-              name: file?.name || 'Torrent',
-              progress: torrent.progress,
+              name: torrent.name || 'Torrent',
+              progress: torrent.progress || 0,
               downloadSpeed: 0,
               uploadSpeed: 0,
-              numPeers: torrent.numPeers,
+              numPeers: torrent.numPeers || 0,
               timeRemaining: 0,
               isReady: false,
               error: err?.message || 'Torrent download error',
