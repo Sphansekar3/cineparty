@@ -60,8 +60,9 @@ async function scrapeAutoEmbedStream(tmdbId: string, type: string = 'movie') {
 
   const m =
     text.match(/window\.CONFIG\s*=\s*(\{[\s\S]*?\});/) ||
-    text.match(/CONFIG\s*=\s*(\{[\s\S]*?\});/);
-  if (!m) throw new Error(`step3 CONFIG regex failed in ${step3Time}ms`);
+    text.match(/CONFIG\s*=\s*(\{[\s\S]*?\});/) ||
+    text.match(/CONFIG\s*=\s*(\{[\s\S]*?\})<\/script>/);
+  if (!m) throw new Error(`step3 textLen:${text.length} head:${text.slice(0, 200).replace(/\s+/g, ' ')}`);
   const config = JSON.parse(m[1]);
 
   // 4. Fetch stream data API
