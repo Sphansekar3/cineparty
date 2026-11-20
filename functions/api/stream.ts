@@ -1,6 +1,6 @@
 // Cloudflare Pages Function: Pure Direct Stream Scraper Engine
 // Resolves TMDB / IMDB movie titles to clean, ad-free direct HLS master streams
-// Features 8-Cluster Parallel Server Racing, automatic IMDB resolution & sub-second response times
+// Uses Tiered Dual-Server Parallel Racing tailored for Cloudflare Workers subrequest limits
 
 interface SubtitleTrack {
   url: string;
@@ -20,8 +20,12 @@ interface StreamResponse {
 const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36';
 
-// All verified active server clusters on api.wing.st
-const ALL_SERVERS = ['Polaris', 'Munich', 'Light', 'Sirius', 'Nebula', 'Paris', 'Rigel', 'Warsaw'];
+// Prioritized dual-server clusters respecting Cloudflare 6-connection pool limit
+const SERVER_TIERS = [
+  ['Polaris', 'Nebula'], // Covers 90%+ of classics & modern blockbusters
+  ['Munich', 'Light'],   // European and 4K backup mirrors
+  ['Sirius', 'Rigel'],   // High-availability failover
+];
 
 function b64urlEncode(bytes: Uint8Array): string {
   let binary = '';
@@ -105,7 +109,7 @@ async function probeServerCluster(
     `https://enc-dec.app/api/enc-cinejoy?url=${encodeURIComponent(targetQueryUrl)}`,
     {
       headers: { 'User-Agent': UA },
-      signal: AbortSignal.timeout(4500),
+      signal: AbortSignal.timeout(6000),
     }
   );
   if (!encRes.ok) throw new Error(`${server}: enc HTTP ${encRes.status}`);
@@ -126,7 +130,7 @@ async function probeServerCluster(
       'User-Agent': UA,
     },
     body: b64urlDecode(data),
-    signal: AbortSignal.timeout(4500),
+    signal: AbortSignal.timeout(6000),
   });
   if (!postG.ok) throw new Error(`${server}: /g HTTP ${postG.status}`);
   const encryptedBytes = await postG.arrayBuffer();
@@ -139,7 +143,7 @@ async function probeServerCluster(
       text: b64urlEncode(new Uint8Array(encryptedBytes)),
       state,
     }),
-    signal: AbortSignal.timeout(4500),
+    signal: AbortSignal.timeout(6000),
   });
   if (!decRes.ok) throw new Error(`${server}: dec HTTP ${decRes.status}`);
   const decJson = (await decRes.json()) as any;
@@ -200,37 +204,40 @@ async function scrapeDirectHlsStream(
     movieImdb = await resolveImdbIdFromCinemeta(title);
   }
 
-  // 2. Parallel Server Race: Query all 8 server clusters simultaneously
-  // Whichever server responds first with a verified 200 HLS stream wins!
-  try {
-    const racePromises = ALL_SERVERS.map((server) =>
-      probeServerCluster(movieTitle, movieYear, movieImdb, tmdbId, server)
-    );
-    const winner = await Promise.any(racePromises);
+  // 2. Tiered Parallel Racing: Query 2 servers at a time to stay within Cloudflare connection limits
+  for (const tier of SERVER_TIERS) {
+    try {
+      const racePromises = tier.map((server) =>
+        probeServerCluster(movieTitle, movieYear, movieImdb, tmdbId, server)
+      );
+      const winner = await Promise.any(racePromises);
 
-    // If stream has no embedded English subtitles, add OpenSubtitles in background
-    if (winner.subtitles.length === 0 && movieImdb) {
-      const openSubs = await fetchEnglishSubtitles(movieImdb);
-      winner.subtitles.push(...openSubs);
-    }
-
-    return winner;
-  } catch {
-    // If all servers failed with specific year, retry once with year omitted
-    if (movieYear) {
-      try {
-        const fallbackPromises = ALL_SERVERS.map((server) =>
-          probeServerCluster(movieTitle, '', movieImdb, tmdbId, server)
-        );
-        const winner = await Promise.any(fallbackPromises);
-        if (winner.subtitles.length === 0 && movieImdb) {
-          const openSubs = await fetchEnglishSubtitles(movieImdb);
-          winner.subtitles.push(...openSubs);
-        }
-        return winner;
-      } catch {
-        // Fall through to null
+      // If stream has no embedded English subtitles, add OpenSubtitles in background
+      if (winner.subtitles.length === 0 && movieImdb) {
+        const openSubs = await fetchEnglishSubtitles(movieImdb);
+        winner.subtitles.push(...openSubs);
       }
+
+      return winner;
+    } catch {
+      // Continue to next tier
+    }
+  }
+
+  // 3. Fallback: If year was specified and all tiers failed, retry Tier 1 without year restriction
+  if (movieYear) {
+    try {
+      const fallbackPromises = SERVER_TIERS[0].map((server) =>
+        probeServerCluster(movieTitle, '', movieImdb, tmdbId, server)
+      );
+      const winner = await Promise.any(fallbackPromises);
+      if (winner.subtitles.length === 0 && movieImdb) {
+        const openSubs = await fetchEnglishSubtitles(movieImdb);
+        winner.subtitles.push(...openSubs);
+      }
+      return winner;
+    } catch {
+      // Return null below
     }
   }
 
