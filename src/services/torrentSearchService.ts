@@ -228,11 +228,11 @@ export async function searchMoviesCinemeta(query: string): Promise<Movie[]> {
       id: meta.id || meta.imdb_id,
       imdbId: meta.imdb_id || meta.id,
       title: meta.name || 'Untitled',
-      overview: meta.description || `Released in ${meta.releaseInfo || 'N/A'}. Available for instant P2P streaming.`,
+      overview: meta.description || `Released in ${meta.releaseInfo || 'N/A'}. Direct stream scraper ready.`,
       releaseDate: meta.releaseInfo ? `${meta.releaseInfo}-01-01` : undefined,
       posterPath: meta.poster || undefined,
       backdropPath: meta.background || undefined,
-      streamType: 'webtorrent',
+      streamType: 'direct',
     }));
   } catch (err) {
     console.warn('[TorrentSearch] Cinemeta search error:', err);

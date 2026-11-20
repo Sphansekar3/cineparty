@@ -1,5 +1,5 @@
-// Client Service: Stream Resolver & In-Memory Cache
-// Coordinates with /api/stream to get clean, ad-free direct HLS streams & subtitles
+// Client Service: Pure Direct Stream Resolver
+// Calls /api/stream to get clean, ad-free direct HLS streams
 
 export interface SubtitleTrack {
   url: string;
@@ -11,29 +11,32 @@ export interface ResolvedStream {
   success: boolean;
   streamUrl?: string;
   provider?: string;
+  title?: string;
   subtitles?: SubtitleTrack[];
-  fallbackEmbedUrl: string;
+  message?: string;
 }
 
 const streamCache = new Map<string, ResolvedStream>();
 
 export async function resolveMovieStream(
   tmdbId: string | number,
-  imdbId?: string
+  imdbId?: string,
+  title?: string,
+  year?: string
 ): Promise<ResolvedStream> {
   const cacheKey = `${tmdbId}-${imdbId || ''}`;
   if (streamCache.has(cacheKey)) {
     return streamCache.get(cacheKey)!;
   }
 
-  const fallbackEmbedUrl = `https://vidsrc.cc/v2/embed/movie/${tmdbId}?autoPlay=false`;
-
   try {
     const params = new URLSearchParams({ tmdbId: String(tmdbId) });
     if (imdbId) params.set('imdbId', imdbId);
+    if (title) params.set('title', title);
+    if (year) params.set('year', year);
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
+    const timeout = setTimeout(() => controller.abort(), 12000);
 
     const res = await fetch(`/api/stream?${params.toString()}`, {
       signal: controller.signal,
@@ -42,17 +45,18 @@ export async function resolveMovieStream(
 
     if (res.ok) {
       const data: ResolvedStream = await res.json();
-      streamCache.set(cacheKey, data);
+      if (data.success) {
+        streamCache.set(cacheKey, data);
+      }
       return data;
     }
   } catch (err) {
-    console.warn('[StreamResolver] Resolver endpoint unavailable or timed out:', err);
+    console.warn('[StreamResolver] Stream resolver request failed:', err);
   }
 
-  // Default fallback if endpoint is unreachable
-  const defaultFallback: ResolvedStream = {
+  const notFound: ResolvedStream = {
     success: false,
-    fallbackEmbedUrl,
+    message: 'No stream found. This title is not yet available on host servers.',
   };
-  return defaultFallback;
+  return notFound;
 }

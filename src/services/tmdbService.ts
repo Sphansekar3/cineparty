@@ -13,7 +13,7 @@ export const CURATED_MOVIES: Movie[] = [
     voteAverage: 8.4,
     posterPath: 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg',
     backdropPath: 'https://image.tmdb.org/t/p/original/xJHokMbljvjADYdit5fK5VQsXEG.jpg',
-    streamType: 'webtorrent',
+    streamType: 'direct',
   },
   {
     id: 27205,
@@ -25,7 +25,7 @@ export const CURATED_MOVIES: Movie[] = [
     voteAverage: 8.4,
     posterPath: 'https://image.tmdb.org/t/p/w500/oYuLEt3zVCKq57qu2F8dT7NIa6f.jpg',
     backdropPath: 'https://image.tmdb.org/t/p/original/8ZTVqvKDQ8emSGUEMjsS4yHAwrp.jpg',
-    streamType: 'webtorrent',
+    streamType: 'direct',
   },
   {
     id: 155,
@@ -37,7 +37,7 @@ export const CURATED_MOVIES: Movie[] = [
     voteAverage: 8.5,
     posterPath: 'https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg',
     backdropPath: 'https://image.tmdb.org/t/p/original/dqK9Hag1054tghRQSqLSfrkvQnA.jpg',
-    streamType: 'webtorrent',
+    streamType: 'direct',
   },
   {
     id: 438631,
@@ -49,7 +49,7 @@ export const CURATED_MOVIES: Movie[] = [
     voteAverage: 7.8,
     posterPath: 'https://image.tmdb.org/t/p/w500/d5NXSklXo0qyIYkgV94XAgMIckC.jpg',
     backdropPath: 'https://image.tmdb.org/t/p/original/lzWHmYdfeFiMIY4JaMmtR7GEli3.jpg',
-    streamType: 'webtorrent',
+    streamType: 'direct',
   },
   {
     id: 299534,
@@ -61,7 +61,7 @@ export const CURATED_MOVIES: Movie[] = [
     voteAverage: 8.3,
     posterPath: 'https://image.tmdb.org/t/p/w500/or06FN3Dka5tukK1e9sl16pB3iy.jpg',
     backdropPath: 'https://image.tmdb.org/t/p/original/7RyHsO4yDXtBv1zUU3mTpHeQ0d5.jpg',
-    streamType: 'webtorrent',
+    streamType: 'direct',
   },
   {
     id: 569094,
@@ -73,7 +73,7 @@ export const CURATED_MOVIES: Movie[] = [
     voteAverage: 8.4,
     posterPath: 'https://image.tmdb.org/t/p/w500/8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg',
     backdropPath: 'https://image.tmdb.org/t/p/original/4HodYYKEIsGOdinkGi2Ucz6X9i0.jpg',
-    streamType: 'webtorrent',
+    streamType: 'direct',
   },
   {
     id: 872585,
@@ -85,7 +85,7 @@ export const CURATED_MOVIES: Movie[] = [
     voteAverage: 8.1,
     posterPath: 'https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg',
     backdropPath: 'https://image.tmdb.org/t/p/original/fm6KqXpk3M2HVveHwCrBSSBaO0V.jpg',
-    streamType: 'webtorrent',
+    streamType: 'direct',
   },
   {
     id: 693134,
@@ -97,7 +97,7 @@ export const CURATED_MOVIES: Movie[] = [
     voteAverage: 8.2,
     posterPath: 'https://image.tmdb.org/t/p/w500/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg',
     backdropPath: 'https://image.tmdb.org/t/p/original/xOMo8BRK7PfcJv9JCnx7s520b4q.jpg',
-    streamType: 'webtorrent',
+    streamType: 'direct',
   },
   {
     id: 19995,
@@ -109,7 +109,7 @@ export const CURATED_MOVIES: Movie[] = [
     voteAverage: 7.6,
     posterPath: 'https://image.tmdb.org/t/p/w500/kyeqWdyUXW608qlYkRqosgbbn0b.jpg',
     backdropPath: 'https://image.tmdb.org/t/p/original/vL5LR6WdxWPjC3z4yFku44qBhu5.jpg',
-    streamType: 'webtorrent',
+    streamType: 'direct',
   },
   {
     id: 550,
@@ -121,29 +121,29 @@ export const CURATED_MOVIES: Movie[] = [
     voteAverage: 8.4,
     posterPath: 'https://image.tmdb.org/t/p/w500/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg',
     backdropPath: 'https://image.tmdb.org/t/p/original/hZkgoQYus5vegHoetLkCJzb17zJ.jpg',
-    streamType: 'webtorrent',
+    streamType: 'direct',
   },
   {
     id: 999901,
-    title: 'Big Buck Bunny (WebTorrent P2P)',
-    overview: 'A large and lovable rabbit deals with bullying forest creatures in this classic open-source animated short. Streams via WebTorrent P2P with 100% synchronized controls!',
+    title: 'Big Buck Bunny (Direct HD)',
+    overview: 'A large and lovable rabbit deals with bullying forest creatures in this classic open-source animated short. Streams directly with 100% synchronized controls!',
     releaseDate: '2008-04-10',
     voteAverage: 7.2,
     posterPath: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=500&auto=format&fit=crop&q=80',
     backdropPath: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=1200&auto=format&fit=crop&q=80',
-    streamType: 'webtorrent',
-    streamUrl: 'https://webtorrent.io/torrents/big-buck-bunny.torrent',
+    streamType: 'direct',
+    streamUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
   },
   {
     id: 999902,
-    title: 'Sintel (WebTorrent P2P)',
-    overview: 'The open-movie fantasy short following a lonely young woman who rescues and bonds with a baby dragon. Streams via WebTorrent P2P with 100% synchronized controls!',
+    title: 'Sintel (Direct HD)',
+    overview: 'The open-movie fantasy short following a lonely young woman who rescues and bonds with a baby dragon. Streams directly with 100% synchronized controls!',
     releaseDate: '2010-09-27',
     voteAverage: 7.5,
     posterPath: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=500&auto=format&fit=crop&q=80',
     backdropPath: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=1200&auto=format&fit=crop&q=80',
-    streamType: 'webtorrent',
-    streamUrl: 'https://webtorrent.io/torrents/sintel.torrent',
+    streamType: 'direct',
+    streamUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
   }
 ];
 
@@ -171,7 +171,7 @@ export async function searchMovies(query: string, apiKey?: string): Promise<Movi
             voteAverage: item.vote_average,
             posterPath: item.poster_path ? `${TMDB_IMAGE_BASE}w500${item.poster_path}` : undefined,
             backdropPath: item.backdrop_path ? `${TMDB_IMAGE_BASE}original${item.backdrop_path}` : undefined,
-            streamType: 'webtorrent',
+            streamType: 'direct',
           }));
         }
       }
