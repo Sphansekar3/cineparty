@@ -25,12 +25,15 @@ async function scrapeAutoEmbedStream(tmdbId: string, type: string = 'movie') {
   const path = type === 'tv' ? `/embed/tv/${tmdbId}` : `/embed/movie/${tmdbId}`;
 
   // 1. Initial page to retrieve session cookie
+  const t0 = Date.now();
   const initial = await fetch(`https://player.autoembed.me${path}`, {
     headers: { 'User-Agent': UA, Referer: 'https://autoembed.me/' },
   });
   const cookie = initial.headers.get('set-cookie') || '';
+  const step1Time = Date.now() - t0;
 
   // 2. va_src.php endpoint to retrieve player wrapper URL
+  const t1 = Date.now();
   const apiRes = await fetch(
     `https://player.autoembed.me/embed/va_src.php?path=${encodeURIComponent(path)}`,
     {
@@ -41,24 +44,28 @@ async function scrapeAutoEmbedStream(tmdbId: string, type: string = 'movie') {
       },
     }
   );
-  if (!apiRes.ok) return null;
+  if (!apiRes.ok) throw new Error(`step2 failed status ${apiRes.status} in ${Date.now() - t1}ms (step1: ${step1Time}ms)`);
   const { src } = (await apiRes.json()) as { src: string };
-  if (!src) return null;
+  if (!src) throw new Error(`step2 empty src in ${Date.now() - t1}ms`);
+  const step2Time = Date.now() - t1;
 
   // 3. NextGenCloudFabric player HTML
+  const t2 = Date.now();
   const fabricRes = await fetch(src, {
     headers: { 'User-Agent': UA, Referer: 'https://player.autoembed.me/' },
   });
-  if (!fabricRes.ok) return null;
+  if (!fabricRes.ok) throw new Error(`step3 failed status ${fabricRes.status} in ${Date.now() - t2}ms`);
   const text = await fabricRes.text();
+  const step3Time = Date.now() - t2;
 
   const m =
     text.match(/window\.CONFIG\s*=\s*(\{[\s\S]*?\});/) ||
     text.match(/CONFIG\s*=\s*(\{[\s\S]*?\});/);
-  if (!m) return null;
+  if (!m) throw new Error(`step3 CONFIG regex failed in ${step3Time}ms`);
   const config = JSON.parse(m[1]);
 
   // 4. Fetch stream data API
+  const t3 = Date.now();
   const apiUrl =
     (config.streamDataApiUrl || 'https://streamdata.vaplayer.ru/api.php') +
     `?tmdb=${config.mediaId}&type=${config.mediaType}&stream_urls&api_token=${encodeURIComponent(
@@ -72,12 +79,13 @@ async function scrapeAutoEmbedStream(tmdbId: string, type: string = 'movie') {
       Origin: 'https://nextgencloudfabric.com',
     },
   });
-  if (!dataRes.ok) return null;
+  if (!dataRes.ok) throw new Error(`step4 failed status ${dataRes.status} in ${Date.now() - t3}ms`);
   const j = (await dataRes.json()) as any;
   const va = j && (j.vp || j.va);
-  if (!va || !j.data || !j.data.stream_urls) return null;
+  if (!va || !j.data || !j.data.stream_urls) throw new Error(`step4 missing va in ${Date.now() - t3}ms`);
 
   // 5. Decrypt stream_urls using WebAssembly
+  const t4 = Date.now();
   const wasmBytes = va.wasm_url
     ? await (await fetch(va.wasm_url)).arrayBuffer()
     : b64ToUint8Array(va.wasm);
@@ -93,9 +101,10 @@ async function scrapeAutoEmbedStream(tmdbId: string, type: string = 'movie') {
     new Uint8Array(ex.memory.buffer, ptr + 12, outLen)
   );
   const rawUrls = decrypted.split('\n').filter(Boolean);
-  if (!rawUrls.length) return null;
+  if (!rawUrls.length) throw new Error(`step5 rawUrls empty in ${Date.now() - t4}ms`);
 
   // 6. Request host play token from origin /generate.php
+  const t5 = Date.now();
   const origin = new URL(rawUrls[0]).origin;
   const genUrl = `${origin}/generate.php?api_token=${encodeURIComponent(config.apiToken)}`;
   const genRes = await fetch(genUrl, {
@@ -114,6 +123,7 @@ async function scrapeAutoEmbedStream(tmdbId: string, type: string = 'movie') {
     streamUrl: directStreamUrl,
     imdbId: j.data.imdb_id,
     title: j.data.title,
+    timings: `s1:${step1Time}ms s2:${step2Time}ms s3:${step3Time}ms`,
   };
 }
 
