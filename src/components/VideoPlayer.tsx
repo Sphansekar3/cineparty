@@ -5,7 +5,7 @@ import { getEmbedUrl, extractYouTubeId, EMBED_SERVERS } from '../services/embedS
 import { resolveMovieStream, type ResolvedStream } from '../services/streamResolverService';
 import { webTorrentService, type TorrentStatus } from '../services/webTorrentService';
 import { YouTubePlayer } from './YouTubePlayer';
-import { Play, ShieldCheck, ShieldAlert, Server, Sparkles, Loader2, Radio, Wifi } from 'lucide-react';
+import { Play, ShieldCheck, ShieldAlert, Server, Sparkles, Loader2, Radio, Wifi, Subtitles } from 'lucide-react';
 
 interface VideoPlayerProps {
   movie: Movie | null;
@@ -48,6 +48,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [torrentStatus, setTorrentStatus] = useState<TorrentStatus | null>(null);
   const [isTorrentLoading, setIsTorrentLoading] = useState<boolean>(false);
   const [torrentConnectingSeconds, setTorrentConnectingSeconds] = useState<number>(0);
+  const [hlsLevels, setHlsLevels] = useState<{ id: number; label: string }[]>([]);
+  const [currentLevel, setCurrentLevel] = useState<number>(-1);
+  const [subtitlesEnabled, setSubtitlesEnabled] = useState<boolean>(true);
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
   const isInternalSeeking = useRef<boolean>(false);
@@ -150,8 +154,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       hlsRef.current.destroy();
       hlsRef.current = null;
     }
+    setHlsLevels([]);
+    setCurrentLevel(-1);
 
-    const isHlsUrl = directStreamUrl.includes('.m3u8') || directStreamUrl.includes('/api/proxy');
+    const isHlsUrl = directStreamUrl.includes('.m3u8') || directStreamUrl.includes('/api/proxy') || directStreamUrl.includes('/pl/');
 
     if (isHlsUrl && Hls.isSupported()) {
       const hls = new Hls({
@@ -161,6 +167,16 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       hls.loadSource(directStreamUrl);
       hls.attachMedia(video);
       hlsRef.current = hls;
+
+      hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
+        if (data.levels && data.levels.length > 0) {
+          const levels = data.levels.map((lvl, index) => ({
+            id: index,
+            label: lvl.height ? `${lvl.height}p` : `${Math.round(lvl.bitrate / 1000)}k`,
+          }));
+          setHlsLevels(levels);
+        }
+      });
 
       hls.on(Hls.Events.ERROR, (_, data) => {
         if (data.fatal) {
@@ -180,6 +196,25 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       }
     };
   }, [directStreamUrl]);
+
+  // Handle HLS Quality switch
+  const handleLevelChange = (levelId: number) => {
+    setCurrentLevel(levelId);
+    if (hlsRef.current) {
+      hlsRef.current.currentLevel = levelId;
+    }
+  };
+
+  // Handle Subtitle toggle
+  const toggleSubtitles = () => {
+    const video = videoRef.current;
+    if (!video || !video.textTracks) return;
+    const nextState = !subtitlesEnabled;
+    setSubtitlesEnabled(nextState);
+    for (let i = 0; i < video.textTracks.length; i++) {
+      video.textTracks[i].mode = nextState ? 'showing' : 'disabled';
+    }
+  };
 
   // Sync play/pause changes to native video element
   useEffect(() => {
@@ -307,7 +342,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 <p className="text-[11px] text-amber-300 leading-relaxed">
                   Searching for in-browser WebRTC seeders ({torrentConnectingSeconds}s)...<br />
                   <span className="text-gray-400 text-[10px]">
-                    Traditional torrents seed over TCP/UDP (desktop apps). If WebRTC seeders are offline right now, you can switch to Server Embed to watch immediately!
+                    Traditional torrents seed over TCP/UDP (desktop apps). If WebRTC seeders are offline right now, switch to Direct HLS / Server Embed to watch immediately!
                   </span>
                 </p>
                 {onSwitchToEmbed && (
@@ -316,7 +351,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                     className="px-3.5 py-1.5 bg-cinema-accent hover:bg-cinema-accentHover text-white text-xs font-bold rounded-lg shadow transition active:scale-95 flex items-center justify-center gap-1.5 mx-auto"
                   >
                     <Server className="w-3.5 h-3.5" />
-                    <span>Switch to Server Embed (Play Instantly)</span>
+                    <span>Switch to Direct HLS (Play Instantly)</span>
                   </button>
                 )}
               </div>
@@ -331,6 +366,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             className="w-full h-full object-contain"
             controls
             playsInline
+            crossOrigin="anonymous"
             onPlay={() => onNativePlay?.()}
             onPause={() => onNativePause?.()}
             onSeeked={(e) => {
@@ -338,7 +374,18 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 onNativeSeek?.((e.target as HTMLVideoElement).currentTime);
               }
             }}
-          />
+          >
+            {resolvedStream?.subtitles?.map((sub, idx) => (
+              <track
+                key={sub.url}
+                kind="subtitles"
+                src={sub.url}
+                srcLang={sub.lang}
+                label={sub.label}
+                default={idx === 0 && subtitlesEnabled}
+              />
+            ))}
+          </video>
         )}
 
         {/* Source 2: Fallback Movie Embed with Smart Ad-Shield (When direct stream unavailable) */}
@@ -414,7 +461,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       {/* Control Banner underneath the video */}
       <div className="px-3 py-2 bg-cinema-800 border-t border-cinema-700/80 flex flex-wrap items-center justify-between gap-2">
-        <div className="truncate mr-2 max-w-[55%]">
+        <div className="truncate mr-2 max-w-[50%]">
           <h3 className="text-xs sm:text-sm font-bold text-white truncate">{movie.title}</h3>
           <p className="text-[10px] text-gray-400 truncate flex items-center gap-1.5">
             {movie.streamType === 'youtube' ? (
@@ -444,7 +491,42 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {/* Direct HLS Quality Switcher */}
+          {directStreamUrl && hlsLevels.length > 0 && (
+            <div className="flex items-center gap-1">
+              <select
+                value={currentLevel}
+                onChange={(e) => handleLevelChange(Number(e.target.value))}
+                className="px-2 py-1 text-[11px] font-semibold bg-cinema-700 hover:bg-cinema-600 text-gray-200 border border-cinema-600 rounded-lg cursor-pointer focus:outline-none"
+                title="Change Video Resolution"
+              >
+                <option value={-1}>Auto Quality</option>
+                {hlsLevels.map((lvl) => (
+                  <option key={lvl.id} value={lvl.id}>
+                    {lvl.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Subtitles CC Toggle Button */}
+          {resolvedStream?.subtitles && resolvedStream.subtitles.length > 0 && (
+            <button
+              onClick={toggleSubtitles}
+              title={subtitlesEnabled ? 'Disable Subtitles' : 'Enable English Subtitles'}
+              className={`px-2 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition ${
+                subtitlesEnabled
+                  ? 'bg-cinema-accent text-white shadow'
+                  : 'bg-cinema-700 hover:bg-cinema-600 text-gray-400'
+              }`}
+            >
+              <Subtitles className="w-3.5 h-3.5" />
+              <span>CC</span>
+            </button>
+          )}
+
           {/* Ad-Shield Toggle Button (only shown for fallback embed movies) */}
           {!isNativeVideo && movie.streamType === 'embed' && (
             <button
@@ -494,7 +576,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
           <button
             onClick={onOpenMovieCatalog}
-            className="text-xs text-gray-300 hover:text-white bg-cinema-700 hover:bg-cinema-600 px-2.5 py-1 rounded-lg transition shrink-0"
+            className="text-xs text-gray-300 hover:text-white bg-cinema-700 hover:bg-cinema-600 px-2.5 py-1 rounded-lg transition shrink-0 font-medium"
           >
             Change
           </button>

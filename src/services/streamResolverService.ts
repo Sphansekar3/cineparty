@@ -1,10 +1,17 @@
 // Client Service: Stream Resolver & In-Memory Cache
-// Coordinates with /api/stream to get clean, ad-free HLS streams
+// Coordinates with /api/stream to get clean, ad-free direct HLS streams & subtitles
+
+export interface SubtitleTrack {
+  url: string;
+  lang: string;
+  label: string;
+}
 
 export interface ResolvedStream {
   success: boolean;
   streamUrl?: string;
   provider?: string;
+  subtitles?: SubtitleTrack[];
   fallbackEmbedUrl: string;
 }
 
@@ -26,7 +33,7 @@ export async function resolveMovieStream(
     if (imdbId) params.set('imdbId', imdbId);
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 6000);
+    const timeout = setTimeout(() => controller.abort(), 8000);
 
     const res = await fetch(`/api/stream?${params.toString()}`, {
       signal: controller.signal,
@@ -42,7 +49,7 @@ export async function resolveMovieStream(
     console.warn('[StreamResolver] Resolver endpoint unavailable or timed out:', err);
   }
 
-  // Default fallback if endpoint is unreachable (e.g. running locally without Cloudflare Pages Functions)
+  // Default fallback if endpoint is unreachable
   const defaultFallback: ResolvedStream = {
     success: false,
     fallbackEmbedUrl,

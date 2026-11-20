@@ -1,5 +1,5 @@
 // Cloudflare Pages Function: Universal CORS & HLS Video Proxy
-// Proxies .m3u8 manifests and video segments (.ts, .m4s) with header rewriting
+// Proxies .m3u8 manifests and video segments (.ts, .m4s, disguised .html) with header rewriting
 
 export async function onRequest(context: { request: Request }): Promise<Response> {
   const { request } = context;
@@ -34,6 +34,7 @@ export async function onRequest(context: { request: Request }): Promise<Response
   try {
     const parsedTarget = new URL(targetUrl);
     const origin = parsedTarget.origin;
+    const tokenParam = parsedTarget.searchParams.get('token');
 
     const requestHeaders = new Headers();
     requestHeaders.set(
@@ -58,8 +59,10 @@ export async function onRequest(context: { request: Request }): Promise<Response
     });
 
     const contentType = upstreamResponse.headers.get('content-type') || '';
-    const isM3u8 =
+    const isM3u8Url =
       targetUrl.includes('.m3u8') ||
+      targetUrl.includes('/pl/') ||
+      targetUrl.includes('/pli/') ||
       contentType.includes('mpegurl') ||
       contentType.includes('application/x-mpegURL');
 
@@ -71,49 +74,69 @@ export async function onRequest(context: { request: Request }): Promise<Response
     responseHeaders.set('Access-Control-Expose-Headers', 'Content-Length, Content-Range');
 
     // If it's an HLS playlist, rewrite internal segment & sub-playlist URLs
-    if (isM3u8 && upstreamResponse.status === 200) {
+    if (isM3u8Url && upstreamResponse.status === 200) {
       const manifestText = await upstreamResponse.text();
-      const baseUrl = targetUrl.substring(0, targetUrl.lastIndexOf('/') + 1);
+      
+      // Verify if it is actually an M3U8 manifest or text HTML error
+      if (manifestText.includes('#EXTM3U')) {
+        const baseUrl = targetUrl.substring(0, targetUrl.lastIndexOf('/') + 1);
 
-      const rewrittenManifest = manifestText
-        .split('\n')
-        .map((line) => {
-          const trimmed = line.trim();
-          if (!trimmed || trimmed.startsWith('#')) {
-            // Check for URI inside tags like #EXT-X-KEY:METHOD=...,URI="..."
-            if (trimmed.startsWith('#EXT-X-KEY:') && trimmed.includes('URI="')) {
-              return trimmed.replace(/URI="([^"]+)"/, (_, keyUri) => {
-                const absKeyUrl = keyUri.startsWith('http') ? keyUri : new URL(keyUri, baseUrl).href;
-                const proxied = `/api/proxy?url=${encodeURIComponent(absKeyUrl)}${
-                  customReferer ? `&referer=${encodeURIComponent(customReferer)}` : ''
-                }`;
-                return `URI="${proxied}"`;
-              });
+        const rewrittenManifest = manifestText
+          .split('\n')
+          .map((line) => {
+            const trimmed = line.trim();
+            if (!trimmed || trimmed.startsWith('#')) {
+              // Check for URI inside tags like #EXT-X-KEY:METHOD=...,URI="..."
+              if (trimmed.startsWith('#EXT-X-KEY:') && trimmed.includes('URI="')) {
+                return trimmed.replace(/URI="([^"]+)"/, (_, keyUri) => {
+                  let absKeyUrl = keyUri.startsWith('http') ? keyUri : new URL(keyUri, baseUrl).href;
+                  if (tokenParam && !absKeyUrl.includes('token=')) {
+                    absKeyUrl += (absKeyUrl.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(tokenParam);
+                  }
+                  const proxied = `/api/proxy?url=${encodeURIComponent(absKeyUrl)}${
+                    customReferer ? `&referer=${encodeURIComponent(customReferer)}` : ''
+                  }`;
+                  return `URI="${proxied}"`;
+                });
+              }
+              return line;
             }
-            return line;
-          }
 
-          // Line is a segment (.ts / .m4s) or variant playlist (.m3u8)
-          let absUrl = trimmed;
-          if (!absUrl.startsWith('http://') && !absUrl.startsWith('https://')) {
-            absUrl = new URL(trimmed, baseUrl).href;
-          }
+            // Line is a segment (.ts / disguised .html) or variant playlist
+            let absUrl = trimmed;
+            if (!absUrl.startsWith('http://') && !absUrl.startsWith('https://')) {
+              absUrl = new URL(trimmed, baseUrl).href;
+            }
 
-          const proxyParam = `/api/proxy?url=${encodeURIComponent(absUrl)}${
-            customReferer ? `&referer=${encodeURIComponent(customReferer)}` : ''
-          }`;
-          return proxyParam;
-        })
-        .join('\n');
+            // Propagate token parameter if target URL had one
+            if (tokenParam && !absUrl.includes('token=')) {
+              absUrl += (absUrl.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(tokenParam);
+            }
 
-      responseHeaders.set('Content-Type', 'application/vnd.apple.mpegurl');
-      return new Response(rewrittenManifest, {
-        status: 200,
-        headers: responseHeaders,
-      });
+            const proxyParam = `/api/proxy?url=${encodeURIComponent(absUrl)}${
+              customReferer ? `&referer=${encodeURIComponent(customReferer)}` : ''
+            }`;
+            return proxyParam;
+          })
+          .join('\n');
+
+        responseHeaders.set('Content-Type', 'application/vnd.apple.mpegurl');
+        return new Response(rewrittenManifest, {
+          status: 200,
+          headers: responseHeaders,
+        });
+      }
     }
 
-    // Binary video chunk stream (.ts, .m4s, etc.)
+    // Binary video chunk stream (.ts, .m4s, disguised .html TS chunks)
+    if (
+      contentType.includes('text/html') ||
+      targetUrl.includes('.html') ||
+      targetUrl.includes('.ts')
+    ) {
+      responseHeaders.set('Content-Type', 'video/mp2t');
+    }
+
     return new Response(upstreamResponse.body, {
       status: upstreamResponse.status,
       statusText: upstreamResponse.statusText,

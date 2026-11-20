@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Film, Link as LinkIcon, Search, ArrowLeft, X, Check, Star, Play, Wifi, Loader2, Settings, Server } from 'lucide-react';
+import { Film, Link as LinkIcon, Search, ArrowLeft, X, Check, Star, Play, Wifi, Loader2, Settings, Sparkles } from 'lucide-react';
 import type { Movie } from '../types';
 import { searchMovies, CURATED_MOVIES } from '../services/tmdbService';
 import {
@@ -350,39 +350,41 @@ export const ContentSelectorModal: React.FC<ContentSelectorModalProps> = ({
 
                           <div className="mt-2.5 flex flex-col gap-1.5">
                             <button
-                              onClick={() => handleOneClickP2P(m)}
-                              disabled={isResolvingThis}
-                              className="w-full py-1.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white rounded-lg text-xs font-bold shadow transition active:scale-95 flex items-center justify-center gap-1.5"
+                              onClick={() => handleSelectEmbedStream(m)}
+                              className="w-full py-1.5 bg-cinema-accent hover:bg-cinema-accentHover text-white rounded-lg text-xs font-bold shadow transition active:scale-95 flex items-center justify-center gap-1.5"
+                              title="Stream directly with native controls, zero ads & 100% remote sync"
                             >
-                              {isResolvingThis ? (
-                                <>
-                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                  <span>Finding Torrent...</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Play className="w-3 h-3 fill-white" />
-                                  <span>Stream P2P</span>
-                                </>
-                              )}
+                              <Sparkles className="w-3.5 h-3.5" />
+                              <span>Watch (Direct 1080p Sync)</span>
                             </button>
 
-                            <div className="flex gap-1">
+                            <div className="flex gap-1.5">
                               <button
-                                onClick={() => setSelectedQualityMovie(m)}
-                                title="Pick resolution (1080p / 720p / 4K)"
-                                className="flex-1 py-1 bg-cinema-800 hover:bg-cinema-700 text-gray-300 hover:text-white rounded-md text-[10px] font-semibold transition flex items-center justify-center gap-1"
+                                onClick={() => handleOneClickP2P(m)}
+                                disabled={isResolvingThis}
+                                title="Stream via P2P WebTorrent (WebRTC)"
+                                className="flex-1 py-1 bg-violet-900/60 hover:bg-violet-800 text-violet-200 border border-violet-700/50 rounded-md text-[10px] font-semibold transition flex items-center justify-center gap-1"
                               >
-                                <Settings className="w-2.5 h-2.5" />
-                                <span>Quality</span>
+                                {isResolvingThis ? (
+                                  <>
+                                    <Loader2 className="w-3 h-3 animate-spin text-violet-300" />
+                                    <span>Finding...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Wifi className="w-3 h-3 text-violet-300" />
+                                    <span>P2P Torrent</span>
+                                  </>
+                                )}
                               </button>
 
                               <button
-                                onClick={() => handleSelectEmbedStream(m)}
-                                title="Play via Server 1 Embed fallback"
-                                className="px-2 py-1 bg-cinema-800 hover:bg-cinema-700 text-gray-400 hover:text-white rounded-md text-[10px] transition"
+                                onClick={() => setSelectedQualityMovie(m)}
+                                title="Pick resolution (1080p / 720p / 4K)"
+                                className="py-1 px-2.5 bg-cinema-800 hover:bg-cinema-700 text-gray-300 hover:text-white rounded-md text-[10px] font-semibold transition flex items-center justify-center gap-1 border border-cinema-700"
                               >
-                                <Server className="w-2.5 h-2.5" />
+                                <Settings className="w-2.5 h-2.5" />
+                                <span>Seeds</span>
                               </button>
                             </div>
                           </div>
