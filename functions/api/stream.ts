@@ -193,7 +193,8 @@ async function scrapeDirectHlsStream(
   tmdbId: string,
   imdbId?: string,
   title?: string,
-  year?: string
+  year?: string,
+  debugLog?: string[]
 ): Promise<{ streamUrl: string; subtitles: SubtitleTrack[]; provider: string } | null> {
   const movieTitle = title || 'Movie';
   const movieYear = year || '';
@@ -202,14 +203,20 @@ async function scrapeDirectHlsStream(
   let movieImdb = imdbId || '';
   if (!movieImdb && title) {
     movieImdb = await resolveImdbIdFromCinemeta(title);
+    debugLog?.push(`Resolved IMDB: ${movieImdb}`);
   }
 
   // 2. Tiered Parallel Racing: Query 2 servers at a time to stay within Cloudflare connection limits
   for (const tier of SERVER_TIERS) {
     try {
-      const racePromises = tier.map((server) =>
-        probeServerCluster(movieTitle, movieYear, movieImdb, tmdbId, server)
-      );
+      const racePromises = tier.map(async (server) => {
+        try {
+          return await probeServerCluster(movieTitle, movieYear, movieImdb, tmdbId, server);
+        } catch (err: any) {
+          debugLog?.push(`${server} failed: ${err.message}`);
+          throw err;
+        }
+      });
       const winner = await Promise.any(racePromises);
 
       // If stream has no embedded English subtitles, add OpenSubtitles in background
@@ -227,9 +234,14 @@ async function scrapeDirectHlsStream(
   // 3. Fallback: If year was specified and all tiers failed, retry Tier 1 without year restriction
   if (movieYear) {
     try {
-      const fallbackPromises = SERVER_TIERS[0].map((server) =>
-        probeServerCluster(movieTitle, '', movieImdb, tmdbId, server)
-      );
+      const fallbackPromises = SERVER_TIERS[0].map(async (server) => {
+        try {
+          return await probeServerCluster(movieTitle, '', movieImdb, tmdbId, server);
+        } catch (err: any) {
+          debugLog?.push(`Fallback ${server} failed: ${err.message}`);
+          throw err;
+        }
+      });
       const winner = await Promise.any(fallbackPromises);
       if (winner.subtitles.length === 0 && movieImdb) {
         const openSubs = await fetchEnglishSubtitles(movieImdb);
@@ -250,6 +262,7 @@ export async function onRequestGet(context: { request: Request }): Promise<Respo
   const imdbId = url.searchParams.get('imdbId') || undefined;
   const title = url.searchParams.get('title') || undefined;
   const year = url.searchParams.get('year') || undefined;
+  const debugLog: string[] = [];
 
   if (!tmdbId && !imdbId && !title) {
     return new Response(
@@ -270,7 +283,7 @@ export async function onRequestGet(context: { request: Request }): Promise<Respo
   const id = tmdbId || imdbId || '';
 
   try {
-    const stream = await scrapeDirectHlsStream(id, imdbId, title, year);
+    const stream = await scrapeDirectHlsStream(id, imdbId, title, year, debugLog);
 
     if (stream && stream.streamUrl) {
       const response: StreamResponse = {
@@ -295,9 +308,10 @@ export async function onRequestGet(context: { request: Request }): Promise<Respo
   }
 
   // When no host has uploaded the stream yet
-  const notFoundResponse: StreamResponse = {
+  const notFoundResponse = {
     success: false,
     message: 'No stream found. This title is not yet available on host servers.',
+    debug: debugLog,
   };
 
   return new Response(JSON.stringify(notFoundResponse), {
