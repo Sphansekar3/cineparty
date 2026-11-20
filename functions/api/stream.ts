@@ -178,11 +178,12 @@ export async function onRequest(context: { request: Request }): Promise<Response
   const id = tmdbId || imdbId || '';
   const fallbackEmbedUrl = `https://vidsrc.cc/v2/embed/movie/${id}?autoPlay=false`;
 
+  let autoEmbedError: string | null = null;
   // 1. Primary Scraper: AutoEmbed Direct HLS Extraction
   try {
     const autoEmbedResult = await Promise.race([
       scrapeAutoEmbedStream(id, type),
-      new Promise<null>((resolve) => setTimeout(() => resolve(null), 6000)),
+      new Promise<null>((_, reject) => setTimeout(() => reject(new Error('Timeout after 9000ms')), 9000)),
     ]);
 
     if (autoEmbedResult && autoEmbedResult.streamUrl) {
@@ -209,8 +210,8 @@ export async function onRequest(context: { request: Request }): Promise<Response
         },
       });
     }
-  } catch {
-    // Continue to fallback providers
+  } catch (err: any) {
+    autoEmbedError = err?.message || String(err);
   }
 
   // 2. Secondary Scrapers: VidSrc / MultiEmbed
@@ -275,9 +276,10 @@ export async function onRequest(context: { request: Request }): Promise<Response
   }
 
   // 3. Graceful Fallback to Embed Player if direct streams cannot be resolved
-  const fallbackResult: StreamResult = {
+  const fallbackResult: any = {
     success: false,
     fallbackEmbedUrl,
+    debug: autoEmbedError,
   };
 
   return new Response(JSON.stringify(fallbackResult), {
