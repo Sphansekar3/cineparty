@@ -292,10 +292,9 @@ export async function onRequest(context: { request: Request }): Promise<Response
   }
 
   // 3. Graceful Fallback to Embed Player if direct streams cannot be resolved
-  const fallbackResult: any = {
+  const fallbackResult: StreamResult = {
     success: false,
     fallbackEmbedUrl,
-    debug: autoEmbedError,
   };
 
   return new Response(JSON.stringify(fallbackResult), {
