@@ -1,6 +1,6 @@
 // Cloudflare Pages Function: Pure Direct Stream Scraper Engine
 // Resolves TMDB / IMDB movie titles to clean, ad-free direct HLS master streams
-// Uses Tiered Dual-Server Parallel Racing tailored for Cloudflare Workers subrequest limits
+// Uses Datacenter-Clean Host Clusters (Polaris, Munich, Paris, Warsaw) with sub-second parallel resolution
 
 interface SubtitleTrack {
   url: string;
@@ -20,11 +20,11 @@ interface StreamResponse {
 const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36';
 
-// Prioritized dual-server clusters respecting Cloudflare 6-connection pool limit
+// Verified datacenter-clean host server clusters on api.wing.st
+// Polaris (erebus.cursed.st) and Munich (zfs-bucket.online) do not block or redirect Cloudflare Workers IPs
 const SERVER_TIERS = [
-  ['Polaris', 'Nebula'], // Covers 90%+ of classics & modern blockbusters
-  ['Munich', 'Light'],   // European and 4K backup mirrors
-  ['Sirius', 'Rigel'],   // High-availability failover
+  ['Polaris', 'Munich'], // Primary high-speed clusters (US & Europe)
+  ['Paris', 'Warsaw'],   // Secondary failover clusters
 ];
 
 function b64urlEncode(bytes: Uint8Array): string {
@@ -109,7 +109,7 @@ async function probeServerCluster(
     `https://enc-dec.app/api/enc-cinejoy?url=${encodeURIComponent(targetQueryUrl)}`,
     {
       headers: { 'User-Agent': UA },
-      signal: AbortSignal.timeout(6000),
+      signal: AbortSignal.timeout(5000),
     }
   );
   if (!encRes.ok) throw new Error(`${server}: enc HTTP ${encRes.status}`);
@@ -130,7 +130,7 @@ async function probeServerCluster(
       'User-Agent': UA,
     },
     body: b64urlDecode(data),
-    signal: AbortSignal.timeout(6000),
+    signal: AbortSignal.timeout(5000),
   });
   if (!postG.ok) throw new Error(`${server}: /g HTTP ${postG.status}`);
   const encryptedBytes = await postG.arrayBuffer();
@@ -143,7 +143,7 @@ async function probeServerCluster(
       text: b64urlEncode(new Uint8Array(encryptedBytes)),
       state,
     }),
-    signal: AbortSignal.timeout(6000),
+    signal: AbortSignal.timeout(5000),
   });
   if (!decRes.ok) throw new Error(`${server}: dec HTTP ${decRes.status}`);
   const decJson = (await decRes.json()) as any;
@@ -152,10 +152,15 @@ async function probeServerCluster(
 
   if (!rawPlaylist) throw new Error(`${server}: no playlist returned`);
 
+  // Detect and reject anti-bot decoy redirect loops
+  if (rawPlaylist.includes('dontscrape')) {
+    throw new Error(`${server}: decoy playlist detected`);
+  }
+
   // 4. Verify that the master playlist is accessible and delivers 200
   const plCheck = await fetch(rawPlaylist, {
     headers: { 'User-Agent': UA, Referer: 'https://cinejoy.pk/' },
-    signal: AbortSignal.timeout(4000),
+    signal: AbortSignal.timeout(3500),
   });
 
   if (!plCheck.ok) {
@@ -193,8 +198,7 @@ async function scrapeDirectHlsStream(
   tmdbId: string,
   imdbId?: string,
   title?: string,
-  year?: string,
-  debugLog?: string[]
+  year?: string
 ): Promise<{ streamUrl: string; subtitles: SubtitleTrack[]; provider: string } | null> {
   const movieTitle = title || 'Movie';
   const movieYear = year || '';
@@ -203,20 +207,14 @@ async function scrapeDirectHlsStream(
   let movieImdb = imdbId || '';
   if (!movieImdb && title) {
     movieImdb = await resolveImdbIdFromCinemeta(title);
-    debugLog?.push(`Resolved IMDB: ${movieImdb}`);
   }
 
-  // 2. Tiered Parallel Racing: Query 2 servers at a time to stay within Cloudflare connection limits
+  // 2. Tiered Parallel Racing: Query 2 datacenter-clean servers at a time
   for (const tier of SERVER_TIERS) {
     try {
-      const racePromises = tier.map(async (server) => {
-        try {
-          return await probeServerCluster(movieTitle, movieYear, movieImdb, tmdbId, server);
-        } catch (err: any) {
-          debugLog?.push(`${server} failed: ${err.message}`);
-          throw err;
-        }
-      });
+      const racePromises = tier.map((server) =>
+        probeServerCluster(movieTitle, movieYear, movieImdb, tmdbId, server)
+      );
       const winner = await Promise.any(racePromises);
 
       // If stream has no embedded English subtitles, add OpenSubtitles in background
@@ -234,14 +232,9 @@ async function scrapeDirectHlsStream(
   // 3. Fallback: If year was specified and all tiers failed, retry Tier 1 without year restriction
   if (movieYear) {
     try {
-      const fallbackPromises = SERVER_TIERS[0].map(async (server) => {
-        try {
-          return await probeServerCluster(movieTitle, '', movieImdb, tmdbId, server);
-        } catch (err: any) {
-          debugLog?.push(`Fallback ${server} failed: ${err.message}`);
-          throw err;
-        }
-      });
+      const fallbackPromises = SERVER_TIERS[0].map((server) =>
+        probeServerCluster(movieTitle, '', movieImdb, tmdbId, server)
+      );
       const winner = await Promise.any(fallbackPromises);
       if (winner.subtitles.length === 0 && movieImdb) {
         const openSubs = await fetchEnglishSubtitles(movieImdb);
@@ -262,7 +255,6 @@ export async function onRequestGet(context: { request: Request }): Promise<Respo
   const imdbId = url.searchParams.get('imdbId') || undefined;
   const title = url.searchParams.get('title') || undefined;
   const year = url.searchParams.get('year') || undefined;
-  const debugLog: string[] = [];
 
   if (!tmdbId && !imdbId && !title) {
     return new Response(
@@ -283,7 +275,7 @@ export async function onRequestGet(context: { request: Request }): Promise<Respo
   const id = tmdbId || imdbId || '';
 
   try {
-    const stream = await scrapeDirectHlsStream(id, imdbId, title, year, debugLog);
+    const stream = await scrapeDirectHlsStream(id, imdbId, title, year);
 
     if (stream && stream.streamUrl) {
       const response: StreamResponse = {
@@ -308,10 +300,9 @@ export async function onRequestGet(context: { request: Request }): Promise<Respo
   }
 
   // When no host has uploaded the stream yet
-  const notFoundResponse = {
+  const notFoundResponse: StreamResponse = {
     success: false,
     message: 'No stream found. This title is not yet available on host servers.',
-    debug: debugLog,
   };
 
   return new Response(JSON.stringify(notFoundResponse), {
