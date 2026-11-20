@@ -21,10 +21,11 @@ const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36';
 
 // Verified datacenter-clean host server clusters on api.wing.st
-// Polaris (erebus.cursed.st) and Munich (zfs-bucket.online) do not block or redirect Cloudflare Workers IPs
+// Raced in pairs to strictly respect Cloudflare Workers' 6-connection pool limit
 const SERVER_TIERS = [
-  ['Polaris', 'Munich'], // Primary high-speed clusters (US & Europe)
-  ['Paris', 'Warsaw'],   // Secondary failover clusters
+  ['Polaris', 'Munich'], // Primary high-speed clusters (US & Europe, zero Cloudflare blocks)
+  ['Nebula', 'Paris'],   // High-bitrate 1080p & European mirrors
+  ['Warsaw'],            // Failover cluster
 ];
 
 function b64urlEncode(bytes: Uint8Array): string {
@@ -59,6 +60,21 @@ async function resolveImdbIdFromCinemeta(title: string): Promise<string> {
     const data = (await res.json()) as any;
     const top = data.metas?.[0];
     return top?.imdb_id || top?.id || '';
+  } catch {
+    return '';
+  }
+}
+
+// Automatically resolve numeric TMDB ID from IMDB ID (api.wing.st strictly requires numeric TMDB)
+async function resolveTmdbIdFromImdb(imdbId: string): Promise<string> {
+  try {
+    const res = await fetch(
+      `https://v3-cinemeta.strem.io/meta/movie/${imdbId}.json`,
+      { signal: AbortSignal.timeout(3000) }
+    );
+    if (!res.ok) return '';
+    const data = (await res.json()) as any;
+    return data.meta?.moviedb_id ? String(data.meta.moviedb_id) : '';
   } catch {
     return '';
   }
@@ -195,7 +211,7 @@ async function probeServerCluster(
 }
 
 async function scrapeDirectHlsStream(
-  tmdbId: string,
+  tmdbId?: string,
   imdbId?: string,
   title?: string,
   year?: string
@@ -203,23 +219,36 @@ async function scrapeDirectHlsStream(
   const movieTitle = title || 'Movie';
   const movieYear = year || '';
 
-  // 1. Ensure we have IMDB ID (crucial for host servers to find blockbusters)
-  let movieImdb = imdbId || '';
-  if (!movieImdb && title) {
-    movieImdb = await resolveImdbIdFromCinemeta(title);
+  let effectiveImdb = imdbId || '';
+  let effectiveTmdb = tmdbId || '';
+
+  // 1. If tmdbId was passed as an IMDB ID (starts with 'tt'), convert it to numeric TMDB ID
+  if (effectiveTmdb && effectiveTmdb.startsWith('tt')) {
+    if (!effectiveImdb) effectiveImdb = effectiveTmdb;
+    effectiveTmdb = await resolveTmdbIdFromImdb(effectiveTmdb);
   }
 
-  // 2. Tiered Parallel Racing: Query 2 datacenter-clean servers at a time
+  // 2. If IMDB ID is missing, resolve it from Cinemeta search
+  if (!effectiveImdb && title) {
+    effectiveImdb = await resolveImdbIdFromCinemeta(title);
+  }
+
+  // 3. If TMDB ID is missing but we have an IMDB ID, resolve numeric TMDB ID
+  if (!effectiveTmdb && effectiveImdb) {
+    effectiveTmdb = await resolveTmdbIdFromImdb(effectiveImdb);
+  }
+
+  // 4. Tiered Parallel Racing: Query 2 datacenter-clean servers at a time
   for (const tier of SERVER_TIERS) {
     try {
       const racePromises = tier.map((server) =>
-        probeServerCluster(movieTitle, movieYear, movieImdb, tmdbId, server)
+        probeServerCluster(movieTitle, movieYear, effectiveImdb, effectiveTmdb, server)
       );
       const winner = await Promise.any(racePromises);
 
       // If stream has no embedded English subtitles, add OpenSubtitles in background
-      if (winner.subtitles.length === 0 && movieImdb) {
-        const openSubs = await fetchEnglishSubtitles(movieImdb);
+      if (winner.subtitles.length === 0 && effectiveImdb) {
+        const openSubs = await fetchEnglishSubtitles(effectiveImdb);
         winner.subtitles.push(...openSubs);
       }
 
@@ -229,15 +258,15 @@ async function scrapeDirectHlsStream(
     }
   }
 
-  // 3. Fallback: If year was specified and all tiers failed, retry Tier 1 without year restriction
+  // 5. Fallback: If year was specified and all tiers failed, retry Tier 1 without year restriction
   if (movieYear) {
     try {
       const fallbackPromises = SERVER_TIERS[0].map((server) =>
-        probeServerCluster(movieTitle, '', movieImdb, tmdbId, server)
+        probeServerCluster(movieTitle, '', effectiveImdb, effectiveTmdb, server)
       );
       const winner = await Promise.any(fallbackPromises);
-      if (winner.subtitles.length === 0 && movieImdb) {
-        const openSubs = await fetchEnglishSubtitles(movieImdb);
+      if (winner.subtitles.length === 0 && effectiveImdb) {
+        const openSubs = await fetchEnglishSubtitles(effectiveImdb);
         winner.subtitles.push(...openSubs);
       }
       return winner;
