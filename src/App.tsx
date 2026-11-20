@@ -432,6 +432,18 @@ export const App: React.FC = () => {
     addSystemNotice(`You loaded "${movie.title}"`);
   };
 
+  const handleSwitchToEmbed = () => {
+    if (!currentMovie) return;
+    const nextMovie: Movie = {
+      ...currentMovie,
+      streamType: 'embed',
+      streamUrl: undefined,
+    };
+    setCurrentMovie(nextMovie);
+    broadcastSync('MOVIE_CHANGE', { movie: nextMovie });
+    addSystemNotice(`Switched "${currentMovie.title}" to Server Embed`);
+  };
+
   const handleSendMessage = (text: string) => {
     const newMsg: ChatMessage = {
       id: `chat-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
@@ -584,6 +596,7 @@ export const App: React.FC = () => {
             onSelectServer={handleSelectServer}
             onOpenMovieCatalog={() => setIsCatalogOpen(true)}
             onDirectStreamChange={setHasDirectMovieStream}
+            onSwitchToEmbed={handleSwitchToEmbed}
           />
 
           {/* Sync Controller Bar with ONE Unified Play/Pause Button */}

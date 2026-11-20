@@ -22,6 +22,7 @@ interface VideoPlayerProps {
   onSelectServer: (serverId: string) => void;
   onOpenMovieCatalog: () => void;
   onDirectStreamChange?: (hasDirectStream: boolean) => void;
+  onSwitchToEmbed?: () => void;
 }
 
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({
@@ -39,12 +40,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   onSelectServer,
   onOpenMovieCatalog,
   onDirectStreamChange,
+  onSwitchToEmbed,
 }) => {
   const [adShieldEnabled, setAdShieldEnabled] = useState<boolean>(false);
   const [resolvedStream, setResolvedStream] = useState<ResolvedStream | null>(null);
   const [isResolvingStream, setIsResolvingStream] = useState<boolean>(false);
   const [torrentStatus, setTorrentStatus] = useState<TorrentStatus | null>(null);
   const [isTorrentLoading, setIsTorrentLoading] = useState<boolean>(false);
+  const [torrentConnectingSeconds, setTorrentConnectingSeconds] = useState<number>(0);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
   const isInternalSeeking = useRef<boolean>(false);
@@ -123,6 +126,18 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
       webTorrentService.stopCurrentTorrent();
     };
   }, [movie?.streamType, movie?.streamUrl]);
+
+  // Track WebTorrent connecting duration
+  useEffect(() => {
+    if (movie?.streamType !== 'webtorrent' || !isTorrentLoading) {
+      setTorrentConnectingSeconds(0);
+      return;
+    }
+    const timer = setInterval(() => {
+      setTorrentConnectingSeconds((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [movie?.streamType, isTorrentLoading]);
 
   // Setup HLS or direct native video playback
   useEffect(() => {
@@ -279,10 +294,31 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               Discovering WebRTC seeders & downloading initial video metadata...
             </p>
             {torrentStatus && (
-              <div className="flex items-center gap-2 text-[10px] text-violet-300 bg-violet-950/60 border border-violet-800/60 px-3 py-1 rounded-full">
+              <div className="flex items-center gap-2 text-[10px] text-violet-300 bg-violet-950/60 border border-violet-800/60 px-3 py-1 rounded-full mb-3">
                 <span>Peers: {torrentStatus.numPeers}</span>
                 <span>•</span>
                 <span>Speed: {(torrentStatus.downloadSpeed / 1024 / 1024).toFixed(1)} MB/s</span>
+              </div>
+            )}
+
+            {/* Smart fallback notice after 8s of searching with 0 peers */}
+            {torrentConnectingSeconds >= 8 && (!torrentStatus || torrentStatus.numPeers === 0) && (
+              <div className="mt-2 p-3 bg-cinema-800/95 border border-cinema-700 rounded-xl text-center max-w-md animate-fadeIn space-y-2">
+                <p className="text-[11px] text-amber-300 leading-relaxed">
+                  Searching for in-browser WebRTC seeders ({torrentConnectingSeconds}s)...<br />
+                  <span className="text-gray-400 text-[10px]">
+                    Traditional torrents seed over TCP/UDP (desktop apps). If WebRTC seeders are offline right now, you can switch to Server Embed to watch immediately!
+                  </span>
+                </p>
+                {onSwitchToEmbed && (
+                  <button
+                    onClick={onSwitchToEmbed}
+                    className="px-3.5 py-1.5 bg-cinema-accent hover:bg-cinema-accentHover text-white text-xs font-bold rounded-lg shadow transition active:scale-95 flex items-center justify-center gap-1.5 mx-auto"
+                  >
+                    <Server className="w-3.5 h-3.5" />
+                    <span>Switch to Server Embed (Play Instantly)</span>
+                  </button>
+                )}
               </div>
             )}
           </div>
